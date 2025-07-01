@@ -1,11 +1,12 @@
-import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import { useColorScheme } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import Colors from '../constants/Colors';
 import SearchBar from '../components/SearchBar';
-import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import CategoryService, { Category } from '../services/CategoryService';
 
 // Types pour la navigation
 export type SearchStackParamList = {
@@ -13,77 +14,30 @@ export type SearchStackParamList = {
   Category: { categoryKey: string; categoryLabel: string };
 };
 
-// Type pour les catégories
-interface Category {
-  key: string;
-  label: string;
-  icon: React.ReactNode;
-  badge?: string;
-}
-
-const CATEGORIES: Category[] = [
-  {
-    key: 'femmes',
-    label: 'Femmes',
-    icon: <MaterialCommunityIcons name="human-female" size={26} color="#008080" />,
-  },
-  {
-    key: 'hommes',
-    label: 'Hommes',
-    icon: <MaterialCommunityIcons name="human-male" size={26} color="#008080" />,
-  },
-  {
-    key: 'createurs',
-    label: 'Articles de créateurs',
-    icon: <MaterialCommunityIcons name="diamond-stone" size={26} color="#008080" />,
-  },
-  {
-    key: 'enfants',
-    label: 'Enfants',
-    icon: <MaterialCommunityIcons name="baby-face-outline" size={26} color="#008080" />,
-  },
-  {
-    key: 'maison',
-    label: 'Maison',
-    icon: <MaterialCommunityIcons name="lamp" size={26} color="#008080" />,
-  },
-  {
-    key: 'electronique',
-    label: 'Électronique',
-    icon: <MaterialCommunityIcons name="power" size={26} color="#008080" />,
-  },
-  {
-    key: 'divertissement',
-    label: 'Divertissement',
-    icon: <MaterialCommunityIcons name="book-open-page-variant" size={26} color="#008080" />,
-  },
-  {
-    key: 'loisirs',
-    label: 'Loisirs et collections',
-    icon: <MaterialCommunityIcons name="star-outline" size={26} color="#008080" />,
-    badge: 'Nouveau',
-  },
-  {
-    key: 'sport',
-    label: 'Sport',
-    icon: <MaterialCommunityIcons name="tennis-ball" size={26} color="#008080" />,
-  },
-];
-
 interface CategoryListItemProps {
   item: Category;
   onPress: () => void;
+  style?: any;
 }
 
-function CategoryListItem({ item, onPress }: CategoryListItemProps) {
+function CategoryListItem({ item, onPress, style }: CategoryListItemProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'dark'];
+  
+  // Fonction pour obtenir l'icône MaterialCommunityIcons
+  const getIcon = (iconName?: string) => {
+    if (!iconName) {
+      return <MaterialCommunityIcons name="tag-outline" size={26} color="#008080" />;
+    }
+    return <MaterialCommunityIcons name={iconName as any} size={26} color="#008080" />;
+  };
+
   return (
-    <TouchableOpacity style={[styles.item, { borderBottomColor: colors.border }]} onPress={onPress} activeOpacity={0.7}>
-      <View style={styles.icon}>{item.icon}</View>
+    <TouchableOpacity style={[styles.item, { borderBottomColor: colors.border }, style]} onPress={onPress} activeOpacity={0.7}>
+      <View style={styles.icon}>{getIcon(item.iconName)}</View>
       <Text style={[styles.label, { color: colors.text }]}>{item.label}</Text>
-      {item.badge && (
-        <View style={styles.badge}><Text style={styles.badgeText}>{item.badge}</Text></View>
+      {item.badgeText && (
+        <View style={styles.badge}><Text style={styles.badgeText}>{item.badgeText}</Text></View>
       )}
       <Ionicons name="chevron-forward" size={22} color={colors.text + '99'} style={styles.chevron} />
     </TouchableOpacity>
@@ -93,23 +47,65 @@ function CategoryListItem({ item, onPress }: CategoryListItemProps) {
 export default function SearchScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'dark'];
-  const [search, setSearch] = React.useState('');
+  const [search, setSearch] = useState('');
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
   const navigation = useNavigation<StackNavigationProp<SearchStackParamList>>();
+
+  useEffect(() => {
+    loadCategories();
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadCategories();
+    }, [])
+  );
+
+  const loadCategories = async () => {
+    setLoading(true);
+    try {
+      const data = await CategoryService.getCategoryTree();
+      setCategories(data);
+    } catch (error) {
+      // En cas d'erreur, on peut utiliser des catégories par défaut ou afficher un message
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCategoryPress = (category: Category) => {
+    navigation.navigate('Category', { 
+      categoryKey: category.key, 
+      categoryLabel: category.label 
+    });
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}> 
       <View style={styles.header}>
         <SearchBar value={search} onChangeText={setSearch} placeholder="Rechercher un article ou un membre" />
       </View>
-      <FlatList
-        data={CATEGORIES}
-        keyExtractor={item => item.key}
-        renderItem={({ item }) => (
-          <CategoryListItem item={item} onPress={() => navigation.navigate('Category', { categoryKey: item.key, categoryLabel: item.label })} />
-        )}
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
-      />
+      
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#008080" />
+          <Text style={[styles.loadingText, { color: colors.text }]}>Chargement des catégories...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={categories}
+          keyExtractor={item => item.key}
+          renderItem={({ item }) => (
+            <CategoryListItem 
+              item={item} 
+              onPress={() => handleCategoryPress(item)} 
+            />
+          )}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </View>
   );
 }
@@ -122,6 +118,15 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingHorizontal: 16,
     marginBottom: 8,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
   },
   list: {
     paddingBottom: 24,

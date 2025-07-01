@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import Colors from '../constants/Colors';
 import { useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import AdaptiveImage from './AdaptiveImage';
 
 type Props = {
   title: string;
@@ -39,7 +40,7 @@ export default function ProductCard({
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
       <View style={styles.imageContainer}>
-        <Image source={{ uri: image }} style={styles.image} />
+        <AdaptiveImage source={{ uri: image }} style={styles.image} alt={title} />
         {isPro && (
           <View style={styles.proBadge}>
             <Text style={styles.proText}>Pro</Text>
@@ -89,7 +90,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     minWidth: 160,
     maxWidth: '48%',
-    elevation: 2,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+    } : {
+      elevation: 2,
+    }),
   },
   imageContainer: {
     position: 'relative',
@@ -102,7 +107,6 @@ const styles = StyleSheet.create({
     height: '100%',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    resizeMode: 'cover',
   },
   proBadge: {
     position: 'absolute',

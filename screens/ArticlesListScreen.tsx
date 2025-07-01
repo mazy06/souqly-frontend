@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, FlatList, Text } from 'react-native';
+import { View, ScrollView, StyleSheet, FlatList, Text, RefreshControl, ActivityIndicator } from 'react-native';
 import ProductCard from '../components/ProductCard';
 import PrimaryButton from '../components/PrimaryButton';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,6 +9,7 @@ import VisitorBadge from '../components/VisitorBadge';
 import Skeleton from '../components/Skeleton';
 import SearchBar from '../components/SearchBar';
 import FilterChips from '../components/FilterChips';
+import ProductService, { Product } from '../services/ProductService';
 
 function FavoritesScreen() {
   return (
@@ -23,93 +24,54 @@ export default function ArticlesListScreen({ navigation }: { navigation: any }) 
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('Voir tout');
   const [favorites, setFavorites] = useState<number[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [imageUrls, setImageUrls] = useState<{[key: number]: string}>({});
 
-  const products = [
-    {
-      id: 1,
-      title: "Top fleuri rouge",
-      brand: "Bershka",
-      size: "S / 36 / 8",
-      condition: "Très bon état",
-      price: "9,90",
-      priceWithFees: "11,10",
-      image: "https://images.unsplash.com/photo-1512436991641-6745cdb1723f"
-    },
-    {
-      id: 2,
-      title: "Robe blanche imprimée",
-      brand: "Luftige Bluse mit Blumen",
-      size: "6XL / 52 / 24",
-      condition: "Très bon état",
-      price: "4,50",
-      priceWithFees: "5,43",
-      image: "https://images.unsplash.com/photo-1519125323398-675f0ddb6308"
-    },
-    {
-      id: 3,
-      title: "Robe bleue à pois",
-      brand: "Zara",
-      size: "M / 38 / 10",
-      condition: "Bon état",
-      price: "7,00",
-      priceWithFees: "8,20",
-      image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb"
-    },
-    {
-      id: 4,
-      title: "Robe soirée violette",
-      brand: "Pro",
-      size: "L / 40 / 12",
-      condition: "Comme neuf",
-      price: "19,00",
-      priceWithFees: "21,50",
-      image: "https://images.unsplash.com/photo-1465101046530-73398c7f28ca"
-    },
-    {
-      id: 5,
-      title: "Vase design minimaliste",
-      price: "30",
-      image: "https://images.unsplash.com/photo-1519125323398-675f0ddb6308"
-    },
-    {
-      id: 6,
-      title: "Pull en laine beige",
-      price: "40",
-      image: "https://images.unsplash.com/photo-1512436991641-6745cdb1723f"
-    },
-    {
-      id: 7,
-      title: "Casque Bluetooth JBL",
-      price: "60",
-      image: "https://images.unsplash.com/photo-1519125323398-675f0ddb6308"
-    },
-    {
-      id: 8,
-      title: "Baskets Adidas Originals",
-      price: "55",
-      image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb"
-    },
-    {
-      id: 9,
-      title: "Jouet pour chien en corde",
-      price: "10",
-      image: "https://images.unsplash.com/photo-1465101046530-73398c7f28ca"
-    },
-    {
-      id: 10,
-      title: "Lampe de chevet scandinave",
-      price: "35",
-      image: "https://images.unsplash.com/photo-1512436991641-6745cdb1723f"
-    },
-  ];
+  const loadProducts = async () => {
+    try {
+      setError(null);
+      const response = await ProductService.getProducts({
+        page: 0,
+        pageSize: 20,
+        categoryId: categoryId ? parseInt(categoryId) : undefined,
+        sortBy: 'createdAt',
+        sortOrder: 'desc'
+      });
+      setProducts(response.content);
+      
+      // Charger les URLs des images pour chaque produit
+      const urls: {[key: number]: string} = {};
+      for (const product of response.content) {
+        try {
+          const imageUrl = await ProductService.getProductImageUrl(product);
+          if (imageUrl) {
+            urls[product.id] = imageUrl;
+          }
+        } catch (error) {
+          // Erreur silencieuse pour le chargement d'image
+        }
+      }
+      setImageUrls(urls);
+    } catch (err) {
+      setError('Impossible de charger les produits');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadProducts();
+    setRefreshing(false);
+  };
 
   useEffect(() => {
-    // Simule un chargement réseau
-    const timer = setTimeout(() => setLoading(false), 2000);
-    return () => clearTimeout(timer);
+    loadProducts();
   }, []);
 
   const toggleFavorite = (productId: number) => {
@@ -144,6 +106,17 @@ export default function ArticlesListScreen({ navigation }: { navigation: any }) 
     );
   }
 
+  if (error) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={[styles.errorText, { color: colors.text }]}>{error}</Text>
+        <Text style={[styles.retryText, { color: colors.tabIconDefault }]}>
+          Tire vers le bas pour réessayer
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
@@ -151,17 +124,20 @@ export default function ArticlesListScreen({ navigation }: { navigation: any }) 
         keyExtractor={item => item.id.toString()}
         numColumns={2}
         contentContainerStyle={styles.gridContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
         renderItem={({ item, index }) => (
           <ProductCard
             title={item.title}
             brand={item.brand}
             size={item.size}
             condition={item.condition}
-            price={item.price}
-            priceWithFees={item.priceWithFees}
-            image={item.image}
+            price={item.price.toString()}
+            priceWithFees={item.priceWithFees?.toString()}
+            image={imageUrls[item.id] || 'https://via.placeholder.com/120'}
             onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
-            likes={index % 3 === 0 ? 13 : index % 3 === 1 ? 7 : 0}
+            likes={item.favoriteCount}
             isPro={index % 4 === 0}
             isFavorite={favorites.includes(item.id)}
             onFavoritePress={() => toggleFavorite(item.id)}
@@ -213,5 +189,14 @@ const styles = StyleSheet.create({
   },
   skeletonContent: {
     paddingHorizontal: 8,
+  },
+  errorText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  retryText: {
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 }); 

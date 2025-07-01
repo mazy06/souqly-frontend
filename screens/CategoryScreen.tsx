@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useColorScheme } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -7,6 +7,9 @@ import Colors from '../constants/Colors';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import SearchBar from '../components/SearchBar';
 import { SearchStackParamList } from './SearchScreen';
+import CategoryService, { Category } from '../services/CategoryService';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 
 // Types pour les catégories
 interface CategoryItem {
@@ -225,12 +228,34 @@ export default function CategoryScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'dark'];
   const [search, setSearch] = React.useState('');
+  const [category, setCategory] = React.useState<Category | null>(null);
+  const [loading, setLoading] = React.useState(true);
   const navigation = useNavigation<StackNavigationProp<SearchStackParamList>>();
   const route = useRoute<RouteProp<SearchStackParamList, 'Category'>>();
-  
   const { categoryKey, categoryLabel } = route.params;
-  const parentList = CATEGORY_TREE[categoryKey] || [];
-  const found = parentList.find((cat: CategoryItem) => cat.key === categoryKey);
+
+  const loadCategory = async () => {
+    setLoading(true);
+    try {
+      // On récupère la catégorie par sa clé (avec ses enfants)
+      const cat = await CategoryService.getCategoryByKey(categoryKey);
+      setCategory(cat);
+    } catch (error) {
+      setCategory(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    loadCategory();
+  }, [categoryKey]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadCategory();
+    }, [categoryKey])
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}> 
@@ -243,27 +268,34 @@ export default function CategoryScreen() {
           <Ionicons name="search" size={24} color={colors.text} />
         </TouchableOpacity>
       </View>
-      <FlatList
-        data={[{ key: 'tous', label: 'Tous' }, ...parentList]}
-        keyExtractor={item => item.key}
-        renderItem={({ item }) => (
-          <CategoryListItem
-            item={item}
-            onPress={() => {
-              if (item.children) {
-                navigation.push('Category', {
-                  categoryKey: item.key,
-                  categoryLabel: item.label,
-                });
-              } else {
-                // TODO: Naviguer vers la page produits ou afficher les résultats
-              }
-            }}
-          />
-        )}
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
-      />
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#008080" />
+          <Text style={[styles.loadingText, { color: colors.text }]}>Chargement...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={category ? [{ key: 'tous', label: 'Tous' }, ...(category.children || [])] : []}
+          keyExtractor={item => item.key}
+          renderItem={({ item }) => (
+            <CategoryListItem
+              item={item}
+              onPress={() => {
+                if (item.children && item.children.length > 0) {
+                  navigation.push('Category', {
+                    categoryKey: item.key,
+                    categoryLabel: item.label,
+                  });
+                } else {
+                  // TODO: Naviguer vers la page produits ou afficher les résultats
+                }
+              }}
+            />
+          )}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </View>
   );
 }
@@ -329,5 +361,15 @@ const styles = StyleSheet.create({
   },
   chevron: {
     marginLeft: 4,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 }); 

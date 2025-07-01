@@ -1,6 +1,7 @@
 import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
 import ProfileScreen from '../screens/ProfileScreen';
 import AdminCategoriesScreen from '../screens/AdminCategoriesScreen';
+import MyProductsScreen from '../screens/MyProductsScreen';
 import Colors from '../constants/Colors';
 import { useColorScheme } from 'react-native';
 
@@ -20,6 +21,7 @@ export default function ProfileStack() {
     >
       <Stack.Screen name="ProfileMain" component={ProfileScreen} />
       <Stack.Screen name="AdminCategories" component={AdminCategoriesScreen} />
+      <Stack.Screen name="MyProducts" component={MyProductsScreen} />
     </Stack.Navigator>
   );
 } 

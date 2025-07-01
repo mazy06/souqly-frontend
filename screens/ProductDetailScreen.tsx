@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   FlatList,
   Alert,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import Colors from '../constants/Colors';
@@ -17,6 +18,7 @@ import { useColorScheme } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { HomeStackParamList } from './HomeScreen';
+import ProductService, { Product } from '../services/ProductService';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -106,75 +108,6 @@ const headerStyles = StyleSheet.create({
 });
 // --- End ProductHeader ---
 
-// Mock data for product details
-const getProductData = (productId: string) => {
-  const products: { [key: string]: any } = {
-    '1': {
-      id: 1,
-      title: "Top fleuri rouge",
-      brand: "Bershka",
-      size: "S / 36 / 8",
-      condition: "Très bon état",
-      price: "9,90",
-      priceWithFees: "11,10",
-      shippingInfo: "à partir de 0,00 €",
-      description: "Magnifique top fleuri rouge en parfait état. Tissu léger et confortable, parfait pour l'été. Acheté il y a 2 ans, porté seulement quelques fois.",
-      images: [
-        "https://images.unsplash.com/photo-1512436991641-6745cdb1723f",
-        "https://images.unsplash.com/photo-1519125323398-675f0ddb6308",
-        "https://images.unsplash.com/photo-1506744038136-46273834b3fb",
-      ],
-      seller: {
-        name: "Marie L.",
-        avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786",
-        rating: 4.8,
-        reviews: 127,
-        location: "Paris, France",
-        memberSince: "2021",
-      },
-      tags: ["Mode", "Été", "Casual"],
-      measurements: {
-        "Longueur": "55 cm",
-        "Largeur": "42 cm",
-        "Manches": "Court",
-      },
-      isFavorite: false,
-    },
-    '4': {
-      id: 4,
-      title: "Robe soirée violette",
-      brand: "Pro",
-      size: "L / 40 / 12",
-      condition: "Comme neuf",
-      price: "19,00",
-      priceWithFees: "21,50",
-      shippingInfo: "à partir de 2,50 €",
-      description: "Élégante robe de soirée violette, parfaite pour les occasions spéciales. Tissu soyeux et coupe flattante. Jamais portée, étiquette encore présente.",
-      images: [
-        "https://images.unsplash.com/photo-1465101046530-73398c7f28ca",
-        "https://images.unsplash.com/photo-1512436991641-6745cdb1723f",
-        "https://images.unsplash.com/photo-1519125323398-675f0ddb6308",
-      ],
-      seller: {
-        name: "Sophie M.",
-        avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80",
-        rating: 4.9,
-        reviews: 89,
-        location: "Lyon, France",
-        memberSince: "2020",
-      },
-      tags: ["Soirée", "Élégant", "Occasion spéciale"],
-      measurements: {
-        "Longueur": "95 cm",
-        "Largeur": "44 cm",
-        "Manches": "Sans manches",
-      },
-      isFavorite: true,
-    },
-  };
-  return products[productId] || products['1'];
-};
-
 export default function ProductDetailScreen() {
   const navigation = useNavigation<StackNavigationProp<HomeStackParamList>>();
   const route = useRoute<RouteProp<HomeStackParamList, 'ProductDetail'>>();
@@ -188,21 +121,39 @@ export default function ProductDetailScreen() {
   const [showFullDesc, setShowFullDesc] = useState(false);
   const [tab, setTab] = useState<'dressing' | 'similaires'>('dressing');
   
-  const product = getProductData(productId);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
-  // Initialize favorite state from product data
-  React.useEffect(() => {
-    setIsFavorite(product.isFavorite);
-  }, [product.isFavorite]);
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        const data = await ProductService.getProduct(parseInt(productId));
+        setProduct(data);
+        setIsFavorite(false);
+      } catch (e) {
+        console.error('Error fetching product:', e);
+        setError('Erreur lors de la récupération du produit');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProduct();
+  }, [productId]);
 
   const toggleFavorite = () => {
     setIsFavorite(!isFavorite);
   };
 
   const handleContactSeller = () => {
+    const sellerName = product?.seller ? 
+      `${product.seller.firstName} ${product.seller.lastName}` : 
+      'le vendeur';
+    
     Alert.alert(
       "Contacter le vendeur",
-      "Voulez-vous ouvrir une conversation avec " + product.seller.name + " ?",
+      `Voulez-vous ouvrir une conversation avec ${sellerName} ?`,
       [
         { text: "Annuler", style: "cancel" },
         { text: "Ouvrir", onPress: () => navigation.goBack() }
@@ -232,6 +183,25 @@ export default function ProductDetailScreen() {
     { id: 4, image: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca', brand: 'Kaporal', likes: 1 },
   ];
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.button} />
+      </View>
+    );
+  }
+
+  if (error || !product) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error || 'Produit non trouvé'}</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={() => navigation.goBack()}>
+          <Text style={styles.retryBtnText}>Retourner</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ProductHeader
@@ -245,64 +215,83 @@ export default function ProductDetailScreen() {
       <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false}>
         {/* Image Gallery */}
         <View style={styles.galleryContainer}>
-          <FlatList
-            data={product.images}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={e => {
-              const index = Math.round(e.nativeEvent.contentOffset.x / screenWidth);
-              setCurrentImageIndex(index);
-            }}
-            renderItem={({ item }) => (
-              <Image source={{ uri: item }} style={styles.galleryImage} />
-            )}
-            keyExtractor={(_, i: number) => i.toString()}
-          />
-          <View style={styles.galleryDots}>
-            {product.images.map((_: string, i: number) => (
-              <View
-                key={i}
-                style={[
-                  styles.dot,
-                  currentImageIndex === i && styles.dotActive
-                ]}
+          {product.images && product.images.length > 0 ? (
+            <>
+              <FlatList
+                data={product.images}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onMomentumScrollEnd={e => {
+                  const index = Math.round(e.nativeEvent.contentOffset.x / screenWidth);
+                  setCurrentImageIndex(index);
+                }}
+                renderItem={({ item }) => (
+                  <Image 
+                    source={{ uri: ProductService.getImageUrl(item.id) }} 
+                    style={styles.galleryImage} 
+                    resizeMode="cover" 
+                  />
+                )}
+                keyExtractor={(item) => item.id.toString()}
               />
-            ))}
-          </View>
+              <View style={styles.galleryDots}>
+                {product.images.map((_, i: number) => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.dot,
+                      currentImageIndex === i && styles.dotActive
+                    ]}
+                  />
+                ))}
+              </View>
+            </>
+          ) : (
+            <View style={styles.noImageContainer}>
+              <Ionicons name="image-outline" size={64} color="#ccc" />
+              <Text style={styles.noImageText}>Aucune image disponible</Text>
+            </View>
+          )}
         </View>
 
         {/* Price & Main Info Block */}
         <View style={styles.priceBlock}>
-          <Text style={styles.price}>{product.price} €</Text>
-          <View style={styles.priceProtectionRow}>
-            <Text style={styles.priceWithProtection}>
-              {product.priceWithFees} € Inclut la Protection acheteurs
-            </Text>
-            <Ionicons name="shield-checkmark" size={16} color="#00BFA6" style={{ marginLeft: 4 }} />
-          </View>
+          <Text style={styles.price}>{product.price.toFixed(2)} €</Text>
+          {product.priceWithFees && (
+            <View style={styles.priceProtectionRow}>
+              <Text style={styles.priceWithProtection}>
+                {product.priceWithFees.toFixed(2)} € Inclut la Protection acheteurs
+              </Text>
+              <Ionicons name="shield-checkmark" size={16} color="#00BFA6" style={{ marginLeft: 4 }} />
+            </View>
+          )}
           <View style={styles.shippingBadge}>
             <Ionicons name="car-outline" size={16} color="#fff" style={{ marginRight: 4 }} />
-            <Text style={styles.shippingText}>Frais de port : {product.shippingInfo || "jusqu'à -100%"}</Text>
+            <Text style={styles.shippingText}>
+              Frais de port : {product.shippingInfo || "à définir"}
+            </Text>
           </View>
           <Text style={styles.productMeta}>
-            {product.size} · {product.condition} ·
-            <Text style={styles.brandLink}> {product.brand}</Text>
+            {product.size || 'Taille non spécifiée'} · {product.condition} ·
+            {product.brand && <Text style={styles.brandLink}> {product.brand}</Text>}
           </Text>
         </View>
 
         {/* Seller Info */}
         <View style={styles.sellerBlock}>
-          <Image source={{ uri: product.seller.avatar }} style={styles.sellerAvatar} />
+          <View style={styles.sellerAvatar}>
+            <Ionicons name="person" size={32} color="#ccc" />
+          </View>
           <View style={styles.sellerInfo}>
-            <Text style={styles.sellerName}>{product.seller.name}</Text>
-            <View style={styles.sellerRatingRow}>
-              <Ionicons name="star" size={16} color="#FFD700" />
-              <Text style={styles.sellerRating}>{product.seller.rating}</Text>
-              <Text style={styles.sellerReviews}>({product.seller.reviews} avis)</Text>
-            </View>
-            <Text style={styles.sellerLocation}>{product.seller.location}</Text>
-            <Text style={styles.sellerMemberSince}>Membre depuis {product.seller.memberSince}</Text>
+            <Text style={styles.sellerName}>
+              {product.seller ? 
+                `${product.seller.firstName} ${product.seller.lastName}` : 
+                'Vendeur'
+              }
+            </Text>
+            <Text style={styles.sellerLocation}>Localisation non spécifiée</Text>
+            <Text style={styles.sellerMemberSince}>Membre depuis récemment</Text>
           </View>
           <TouchableOpacity style={styles.contactButton} onPress={handleContactSeller}>
             <Text style={styles.contactButtonText}>Contacter</Text>
@@ -322,15 +311,15 @@ export default function ProductDetailScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Tags */}
+        {/* Category */}
         <View style={styles.tagsBlock}>
-          <Text style={styles.tagsTitle}>Tags</Text>
+          <Text style={styles.tagsTitle}>Catégorie</Text>
           <View style={styles.tagsContainer}>
-            {product.tags.map((tag: string, index: number) => (
-              <View key={index} style={styles.tag}>
-                <Text style={styles.tagText}>{tag}</Text>
+            {product.category && (
+              <View style={styles.tag}>
+                <Text style={styles.tagText}>{product.category.label}</Text>
               </View>
-            ))}
+            )}
           </View>
         </View>
 
@@ -357,7 +346,7 @@ export default function ProductDetailScreen() {
           contentContainerStyle={styles.flatListContent}
           renderItem={({ item }) => (
             <View style={styles.miniCard}>
-              <Image source={{ uri: item.image }} style={styles.miniCardImage} />
+              <Image source={{ uri: item.image }} style={styles.miniCardImage} resizeMode="cover" />
               <Text style={styles.miniCardBrand}>{item.brand}</Text>
               <View style={styles.miniCardLikes}>
                 <Ionicons name="heart-outline" size={14} color="#fff" />
@@ -399,7 +388,6 @@ const styles = StyleSheet.create({
   galleryImage: {
     width: screenWidth,
     height: 400,
-    resizeMode: 'cover',
   },
   galleryDots: {
     position: 'absolute',
@@ -554,10 +542,12 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   sellerAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    marginRight: 14,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   sellerInfo: {
     flex: 1,
@@ -714,7 +704,6 @@ const styles = StyleSheet.create({
     height: 120,
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
-    resizeMode: 'cover',
   },
   miniCardBrand: {
     color: '#fff',
@@ -745,5 +734,42 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 15,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  errorText: {
+    color: '#fff',
+    marginBottom: 16,
+  },
+  retryBtn: {
+    backgroundColor: '#00BFA6',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  retryBtnText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 15,
+  },
+  noImageContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  noImageText: {
+    marginTop: 8,
+    color: '#666',
+    fontSize: 16,
   },
 }); 

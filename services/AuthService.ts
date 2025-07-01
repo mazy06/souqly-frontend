@@ -1,6 +1,7 @@
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import * as Crypto from 'expo-crypto';
+import ApiService from './ApiService';
 
 // Configuration des providers OAuth2
 const AUTH_CONFIG = {
@@ -62,6 +63,8 @@ export interface AuthResult {
   success: boolean;
   user?: AuthUser;
   error?: string;
+  token?: string;
+  refreshToken?: string;
 }
 
 class AuthService {
@@ -235,45 +238,64 @@ class AuthService {
     };
   }
 
-  // Authentification par email (simulation)
+  // Authentification par email (appel au backend via ApiService)
   async signInWithEmail(email: string, password: string): Promise<AuthResult> {
     try {
-      // Simulation d'une authentification par email
-      // Dans une vraie app, tu ferais un appel API vers ton backend
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const data = await ApiService.login(email, password);
       
       return {
         success: true,
         user: {
-          id: `email_${Date.now()}`,
-          email: email,
-          name: email.split('@')[0],
-          provider: 'email'
-        }
+          id: data.user.id.toString(),
+          email: data.user.email,
+          name: data.user.firstName + ' ' + data.user.lastName,
+          provider: 'email',
+          role: data.user.role.toLowerCase(),
+        },
+        token: data.token,
+        refreshToken: data.refreshToken
       };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Erreur de connexion' 
+      };
     }
   }
 
-  // Inscription par email (simulation)
+  // Inscription par email (appel au backend via ApiService)
   async signUpWithEmail(email: string, password: string, name: string): Promise<AuthResult> {
     try {
-      // Simulation d'une inscription par email
-      // Dans une vraie app, tu ferais un appel API vers ton backend
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const [firstName, ...lastNameParts] = name.split(' ');
+      const lastName = lastNameParts.join(' ') || '';
+      
+      const data = await ApiService.register(email, password, firstName, lastName);
       
       return {
         success: true,
         user: {
-          id: `email_${Date.now()}`,
-          email: email,
-          name: name,
-          provider: 'email'
-        }
+          id: data.user.id.toString(),
+          email: data.user.email,
+          name: data.user.firstName + ' ' + data.user.lastName,
+          provider: 'email',
+          role: data.user.role.toLowerCase(),
+        },
+        token: data.token,
+        refreshToken: data.refreshToken
       };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Erreur d\'inscription' 
+      };
+    }
+  }
+
+  // Déconnexion
+  async logout(): Promise<void> {
+    try {
+      await ApiService.logout();
+    } catch (error) {
     }
   }
 }

@@ -1,10 +1,13 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import AuthService, { AuthUser, AuthResult } from '../services/AuthService';
+import TokenService from '../services/TokenService';
+import ApiService from '../services/ApiService';
 
 type AuthContextType = {
   isAuthenticated: boolean;
   isGuest: boolean;
   user: AuthUser | null;
+  isLoading: boolean;
   login: () => void;
   logout: () => void;
   guest: () => void;
@@ -21,16 +24,80 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isGuest, setIsGuest] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Vérifier l'authentification au démarrage de l'app
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+
+  const checkAuthStatus = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Vérifier si l'utilisateur a des tokens valides
+      const isAuth = await TokenService.isAuthenticated();
+      
+      if (isAuth) {
+        try {
+          // Récupérer les informations complètes de l'utilisateur via l'API
+          const userInfo = await ApiService.getCurrentUser() as any;
+          
+          if (userInfo) {
+            setUser({
+              id: userInfo.id.toString(),
+              email: userInfo.email,
+              name: `${userInfo.firstName} ${userInfo.lastName}`.trim(),
+              provider: 'email',
+              role: userInfo.role.toLowerCase(),
+            });
+            setIsAuthenticated(true);
+            setIsGuest(false);
+          } else {
+            // Si l'API ne retourne pas d'utilisateur, supprimer les tokens
+            await TokenService.clearTokens();
+            setIsAuthenticated(false);
+            setIsGuest(false);
+            setUser(null);
+          }
+        } catch (error) {
+          // Erreur silencieuse lors de la récupération des infos utilisateur
+          setUser(null);
+          setIsAuthenticated(false);
+        }
+      } else {
+        // Pas de tokens valides
+        setIsAuthenticated(false);
+        setIsGuest(false);
+        setUser(null);
+      }
+    } catch (error) {
+      // En cas d'erreur, on considère que l'utilisateur n'est pas connecté
+      await TokenService.clearTokens();
+      setIsAuthenticated(false);
+      setIsGuest(false);
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const login = () => {
     setIsAuthenticated(true);
     setIsGuest(false);
   };
 
-  const logout = () => {
-    setIsAuthenticated(false);
-    setIsGuest(false);
-    setUser(null);
+  const logout = async () => {
+    try {
+      // Appeler la méthode de déconnexion du service
+      await AuthService.logout();
+    } catch (error) {
+    } finally {
+      // Toujours nettoyer l'état local
+      setIsAuthenticated(false);
+      setIsGuest(false);
+      setUser(null);
+    }
   };
 
   const guest = () => {
@@ -72,10 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithEmail = async (email: string, password: string): Promise<AuthResult> => {
     const result = await AuthService.signInWithEmail(email, password);
     if (result.success && result.user) {
-      setUser({
-        ...result.user,
-        role: email === 'admin@souqly.com' ? 'admin' : 'user',
-      });
+      setUser(result.user);
       setIsAuthenticated(true);
       setIsGuest(false);
     }
@@ -85,10 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUpWithEmail = async (email: string, password: string, name: string): Promise<AuthResult> => {
     const result = await AuthService.signUpWithEmail(email, password, name);
     if (result.success && result.user) {
-      setUser({
-        ...result.user,
-        role: email === 'admin@souqly.com' ? 'admin' : 'user',
-      });
+      setUser(result.user);
       setIsAuthenticated(true);
       setIsGuest(false);
     }
@@ -100,6 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated, 
       isGuest, 
       user,
+      isLoading,
       login, 
       logout, 
       guest,

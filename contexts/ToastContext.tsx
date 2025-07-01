@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
 
 export type ToastType = 'success' | 'error' | 'info';
 
@@ -54,10 +54,14 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     zIndex: 9999,
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+    } : {
+      shadowColor: '#000',
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      elevation: 4,
+    }),
   },
   toastText: {
     color: '#fff',

@@ -8,6 +8,9 @@ const Colors = {
     card: '#f2f2f2',
     button: '#00BFA6',
     border: '#e0e0e0',
+    primary: '#008080',
+    danger: '#e74c3c',
+    warning: '#f39c12',
   },
   dark: {
     background: '#181A20',
@@ -18,6 +21,9 @@ const Colors = {
     card: '#23242a',
     button: '#00BFA6',
     border: '#333',
+    primary: '#008080',
+    danger: '#e74c3c',
+    warning: '#f39c12',
   },
 };
 export default Colors;
