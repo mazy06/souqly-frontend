@@ -38,7 +38,6 @@ export default function ArticlesListScreen({ navigation }: { navigation: any }) 
       const response = await ProductService.getProducts({
         page: 0,
         pageSize: 20,
-        categoryId: categoryId ? parseInt(categoryId) : undefined,
         sortBy: 'createdAt',
         sortOrder: 'desc'
       });
@@ -57,7 +56,7 @@ export default function ArticlesListScreen({ navigation }: { navigation: any }) 
         }
       }
       setImageUrls(urls);
-    } catch (err) {
+    } catch (err: any) {
       setError('Impossible de charger les produits');
     } finally {
       setLoading(false);

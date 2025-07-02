@@ -129,7 +129,7 @@ L'application utilisera automatiquement la configuration de production.
 1. **Centralisation** : Toutes les URLs dans un seul endroit
 2. **Flexibilité** : Support des variables d'environnement
 3. **Migration facile** : Changement d'environnement en une ligne
-4. **Maintenance** : Configuration claire et documentée
+4. **Gestion d'erreurs** : Configuration claire et documentée
 5. **Sécurité** : Pas d'URLs en dur dans le code
 
 ## Dépannage

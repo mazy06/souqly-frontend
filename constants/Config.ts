@@ -6,7 +6,7 @@ export type Environment = 'development' | 'staging' | 'production';
 // Configuration par environnement
 const ENV_CONFIG = {
   development: {
-    apiBaseUrl: Platform.OS === 'web' ? 'http://192.168.1.71:8080' : 'http://localhost:8080',
+    apiBaseUrl: Platform.OS === 'web' ? 'http://localhost:8080' : 'http://192.168.1.153:8080',
     apiPath: '/api',
   },
   staging: {

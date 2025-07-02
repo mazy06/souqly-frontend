@@ -1,45 +1,7 @@
 import TokenService from './TokenService';
 import { API_CONFIG } from '../constants/Config';
 
-// Variable globale pour stocker la fonction de callback de maintenance
-let maintenanceCallback: ((isMaintenance: boolean, error?: string) => void) | null = null;
-
-// Fonction pour enregistrer le callback de maintenance
-export function setMaintenanceCallback(callback: (isMaintenance: boolean, error?: string) => void) {
-  if (__DEV__) {
-    console.log('🔍 ApiService - Callback de maintenance enregistré');
-  }
-  maintenanceCallback = callback;
-}
-
 class ApiService {
-  /**
-   * Vérifie si une erreur indique un problème de maintenance
-   */
-  private isMaintenanceError(error: any): boolean {
-    // Erreurs réseau qui indiquent un serveur indisponible
-    if (error instanceof TypeError) {
-      return true;
-    }
-    
-    // Erreurs HTTP 500, 502, 503, 504
-    if (error.message && /^Erreur HTTP: (500|502|503|504)$/.test(error.message)) {
-      return true;
-    }
-    
-    // Erreurs de connexion réseau
-    if (error.message && (
-      error.message.includes('NetworkError') ||
-      error.message.includes('ERR_ABORTED') ||
-      error.message.includes('ERR_CONNECTION_REFUSED') ||
-      error.message.includes('Failed to fetch')
-    )) {
-      return true;
-    }
-    
-    return false;
-  }
-
   /**
    * Effectue une requête HTTP avec gestion automatique des tokens
    */
@@ -92,14 +54,6 @@ class ApiService {
         console.log('🔍 ApiService - Erreur capturée:', error);
         console.log('🔍 ApiService - Type d\'erreur:', typeof error);
         console.log('🔍 ApiService - Message:', error instanceof Error ? error.message : String(error));
-      }
-
-      // Vérifier si c'est une erreur de maintenance
-      if (this.isMaintenanceError(error)) {
-        if (__DEV__) {
-          console.log('🔍 ApiService - Erreur de maintenance détectée, appel du callback');
-        }
-        maintenanceCallback?.(true, error instanceof Error ? error.message : String(error));
       }
       throw error;
     }
