@@ -1,12 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
-import { useColorScheme } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import Colors from '../constants/Colors';
 import SearchBar from '../components/SearchBar';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import CategoryService, { Category } from '../services/CategoryService';
+import { useTheme } from '../contexts/ThemeContext';
 
 // Types pour la navigation
 export type SearchStackParamList = {
@@ -21,15 +20,14 @@ interface CategoryListItemProps {
 }
 
 function CategoryListItem({ item, onPress, style }: CategoryListItemProps) {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'dark'];
+  const { colors } = useTheme();
   
   // Fonction pour obtenir l'icône MaterialCommunityIcons
   const getIcon = (iconName?: string) => {
     if (!iconName) {
-      return <MaterialCommunityIcons name="tag-outline" size={26} color="#008080" />;
+      return <MaterialCommunityIcons name="tag-outline" size={26} color={colors.primary} />;
     }
-    return <MaterialCommunityIcons name={iconName as any} size={26} color="#008080" />;
+    return <MaterialCommunityIcons name={iconName as any} size={26} color={colors.primary} />;
   };
 
   return (
@@ -37,7 +35,9 @@ function CategoryListItem({ item, onPress, style }: CategoryListItemProps) {
       <View style={styles.icon}>{getIcon(item.iconName)}</View>
       <Text style={[styles.label, { color: colors.text }]}>{item.label}</Text>
       {item.badgeText && (
-        <View style={styles.badge}><Text style={styles.badgeText}>{item.badgeText}</Text></View>
+        <View style={[styles.badge, { backgroundColor: colors.primary }]}> 
+          <Text style={[styles.badgeText, { color: colors.text }]}>{item.badgeText}</Text>
+        </View>
       )}
       <Ionicons name="chevron-forward" size={22} color={colors.text + '99'} style={styles.chevron} />
     </TouchableOpacity>
@@ -45,8 +45,7 @@ function CategoryListItem({ item, onPress, style }: CategoryListItemProps) {
 }
 
 export default function SearchScreen() {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'dark'];
+  const { colors } = useTheme();
   const [search, setSearch] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,7 +88,7 @@ export default function SearchScreen() {
       
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#008080" />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[styles.loadingText, { color: colors.text }]}>Chargement des catégories...</Text>
         </View>
       ) : (

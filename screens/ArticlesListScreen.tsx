@@ -3,26 +3,25 @@ import { View, ScrollView, StyleSheet, FlatList, Text, RefreshControl, ActivityI
 import ProductCard from '../components/ProductCard';
 import PrimaryButton from '../components/PrimaryButton';
 import { useAuth } from '../contexts/AuthContext';
-import Colors from '../constants/Colors';
-import { useColorScheme } from 'react-native';
 import VisitorBadge from '../components/VisitorBadge';
 import Skeleton from '../components/Skeleton';
 import SearchBar from '../components/SearchBar';
 import FilterChips from '../components/FilterChips';
 import ProductService, { Product } from '../services/ProductService';
+import { useTheme } from '../contexts/ThemeContext';
 
 function FavoritesScreen() {
+  const { colors } = useTheme();
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text style={{ fontSize: 20 }}>Vos articles favoris apparaîtront ici.</Text>
+      <Text style={{ fontSize: 20, color: colors.text }}>Vos articles favoris apparaîtront ici.</Text>
     </View>
   );
 }
 
 export default function ArticlesListScreen({ navigation }: { navigation: any }) {
   const { logout, isGuest } = useAuth();
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const { colors } = useTheme();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -206,6 +205,5 @@ const styles = StyleSheet.create({
   retryButtonText: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: 'white',
   },
 }); 

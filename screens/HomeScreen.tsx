@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { View, ScrollView, RefreshControl, ActivityIndicator, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { useColorScheme } from 'react-native';
 import ProductCard from '../components/ProductCard';
 import ProductService, { Product } from '../services/ProductService';
-import Colors from '../constants/Colors';
+import { useTheme } from '../contexts/ThemeContext';
 
 // Types pour la navigation
 export type HomeStackParamList = {
@@ -16,8 +15,7 @@ export type HomeStackParamList = {
 export default function HomeScreen() {
   console.log('[HomeScreen] Composant monté');
   const navigation = useNavigation<StackNavigationProp<HomeStackParamList>>();
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const { colors } = useTheme();
   
   const [products, setProducts] = useState<Product[]>([]);
   const [imageUrls, setImageUrls] = useState<{[key: number]: string}>({});

@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  useColorScheme,
   Modal,
   ScrollView,
   FlatList,
@@ -13,7 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Category } from '../services/CategoryService';
 import CategoryService from '../services/CategoryService';
-import Colors from '../constants/Colors';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface CrossPlatformCategoryManagerProps {
   categories: Category[];
@@ -43,8 +42,7 @@ const CrossPlatformCategoryManager: React.FC<CrossPlatformCategoryManagerProps> 
   expandedCategories,
   setExpandedCategories,
 }) => {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme || 'light'];
+  const { colors } = useTheme();
   
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);

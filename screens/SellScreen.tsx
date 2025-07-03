@@ -11,14 +11,13 @@ import {
   Platform,
   Animated
 } from 'react-native';
-import { useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Colors from '../constants/Colors';
 import ProductImagePicker from '../components/ProductImagePicker';
 import CategoryPicker from '../components/CategoryPicker';
 import SimplePicker from '../components/SimplePicker';
 import ProductService from '../services/ProductService';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { getImageUrl, getUploadUrl } from '../constants/Config';
 
 interface ProductForm {
@@ -55,8 +54,7 @@ const SIZES = [
 ];
 
 export default function SellScreen() {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const { colors } = useTheme();
   const { isAuthenticated, user } = useAuth();
   
   const [formData, setFormData] = useState<ProductForm>({

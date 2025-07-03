@@ -10,9 +10,8 @@ import {
   Modal
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useColorScheme } from 'react-native';
-import Colors from '../constants/Colors';
 import CategoryService, { Category } from '../services/CategoryService';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface CategoryPickerProps {
   value: string; // ID de la catégorie
@@ -37,8 +36,7 @@ const CategoryPicker: React.FC<CategoryPickerProps> = ({
   disabled = false,
   required = false
 }) => {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const { colors } = useTheme();
   
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -112,7 +110,7 @@ const CategoryPicker: React.FC<CategoryPickerProps> = ({
       {label && (
         <Text style={[styles.label, { color: colors.text }]}>
           {label}
-          {required && <Text style={{ color: '#ff4444' }}> *</Text>}
+          {required && <Text style={{ color: '#008080' }}> *</Text>}
         </Text>
       )}
       
@@ -151,7 +149,7 @@ const CategoryPicker: React.FC<CategoryPickerProps> = ({
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-            <View style={styles.modalHeader}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>
                 Sélectionner une catégorie
               </Text>
@@ -168,7 +166,8 @@ const CategoryPicker: React.FC<CategoryPickerProps> = ({
                     styles.modalOption, 
                     { 
                       paddingLeft: 16 + (item.level * 16),
-                      backgroundColor: value === item.category.id.toString() ? colors.card : 'transparent'
+                      backgroundColor: value === item.category.id.toString() ? colors.card : 'transparent',
+                      borderBottomColor: colors.border
                     }
                   ]}
                   onPress={() => handleSelectCategory(item.category)}
@@ -233,7 +232,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
   },
   modalTitle: {
     fontSize: 18,
@@ -245,7 +243,6 @@ const styles = StyleSheet.create({
   modalOption: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

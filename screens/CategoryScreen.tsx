@@ -1,15 +1,14 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useColorScheme } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import Colors from '../constants/Colors';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import SearchBar from '../components/SearchBar';
 import { SearchStackParamList } from './SearchScreen';
 import CategoryService, { Category } from '../services/CategoryService';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
+import { useTheme } from '../contexts/ThemeContext';
 
 // Types pour les catégories
 interface CategoryItem {
@@ -210,23 +209,35 @@ interface CategoryListItemProps {
 }
 
 function CategoryListItem({ item, onPress }: CategoryListItemProps) {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'dark'];
+  const { colors } = useTheme();
+  let iconNode = null;
+  if (item.icon) {
+    // Si c'est un MaterialCommunityIcons, on le recrée avec la bonne couleur
+    if (React.isValidElement(item.icon) && item.icon.type && (item.icon.type as any).displayName === 'MaterialCommunityIcons') {
+      iconNode = React.createElement(item.icon.type, { ...(item.icon.props as any), color: colors.primary });
+    } else {
+      iconNode = item.icon;
+    }
+  }
+  const hasChildren = (item as any).children && Array.isArray((item as any).children) && (item as any).children.length > 0;
   return (
     <TouchableOpacity style={[styles.item, { borderBottomColor: colors.border }]} onPress={onPress} activeOpacity={0.7}>
-      {item.icon && <View style={styles.icon}>{item.icon}</View>}
+      {iconNode && <View style={styles.icon}>{iconNode}</View>}
       <Text style={[styles.label, { color: colors.text }]} numberOfLines={1}>{item.label}</Text>
       {item.badge && (
-        <View style={styles.badge}><Text style={styles.badgeText}>{item.badge}</Text></View>
+        <View style={[styles.badge, { backgroundColor: colors.primary }]}> 
+          <Text style={[styles.badgeText, { color: colors.text }]}>{item.badge}</Text>
+        </View>
       )}
-      {item.children && <Ionicons name="chevron-forward" size={22} color={colors.text + '99'} style={styles.chevron} />}
+      {hasChildren && (
+        <Ionicons name="chevron-forward" size={22} color={colors.text + '99'} style={styles.chevron} />
+      )}
     </TouchableOpacity>
   );
 }
 
 export default function CategoryScreen() {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'dark'];
+  const { colors } = useTheme();
   const [search, setSearch] = React.useState('');
   const [category, setCategory] = React.useState<Category | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -270,7 +281,7 @@ export default function CategoryScreen() {
       </View>
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#008080" />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[styles.loadingText, { color: colors.text }]}>Chargement...</Text>
         </View>
       ) : (
@@ -281,7 +292,7 @@ export default function CategoryScreen() {
             <CategoryListItem
               item={item}
               onPress={() => {
-                if (item.children && item.children.length > 0) {
+                if ((item as any).children && Array.isArray((item as any).children) && (item as any).children.length > 0) {
                   navigation.push('Category', {
                     categoryKey: item.key,
                     categoryLabel: item.label,

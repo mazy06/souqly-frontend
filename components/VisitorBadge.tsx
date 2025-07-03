@@ -1,14 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
-import Colors from '../constants/Colors';
-import { useColorScheme } from 'react-native';
+import { useTheme } from '../contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function VisitorBadge({ onSignup }: { onSignup: () => void }) {
   const { isGuest } = useAuth();
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const { colors } = useTheme();
 
   if (!isGuest) return null;
 
@@ -27,21 +25,18 @@ const styles = StyleSheet.create({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'center',
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    marginVertical: 6,
-    marginBottom: 2,
+    padding: 12,
+    borderRadius: 8,
+    marginHorizontal: 16,
+    marginVertical: 8,
   },
   text: {
-    fontSize: 13,
+    fontSize: 14,
     marginRight: 8,
   },
   link: {
-    color: '#3ba6a6',
-    textDecorationLine: 'underline',
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: 14,
+    color: '#00BFA6',
+    fontWeight: '600',
   },
 }); 

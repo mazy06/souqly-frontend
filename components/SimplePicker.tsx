@@ -9,8 +9,7 @@ import {
   Modal
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useColorScheme } from 'react-native';
-import Colors from '../constants/Colors';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface SimplePickerProps {
   value: string;
@@ -33,8 +32,7 @@ const SimplePicker: React.FC<SimplePickerProps> = ({
   required = false,
   title
 }) => {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const { colors } = useTheme();
   
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -48,7 +46,7 @@ const SimplePicker: React.FC<SimplePickerProps> = ({
       {label && (
         <Text style={[styles.label, { color: colors.text }]}>
           {label}
-          {required && <Text style={{ color: '#ff4444' }}> *</Text>}
+          {required && <Text style={{ color: '#008080' }}> *</Text>}
         </Text>
       )}
       

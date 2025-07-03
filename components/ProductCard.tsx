@@ -1,9 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
-import Colors from '../constants/Colors';
-import { useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AdaptiveImage from './AdaptiveImage';
+import { useTheme } from '../contexts/ThemeContext';
 
 type Props = {
   title: string;
@@ -34,15 +33,14 @@ export default function ProductCard({
   isFavorite = false,
   onFavoritePress
 }: Props) {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const { colors } = useTheme();
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
-      <View style={styles.imageContainer}>
+    <TouchableOpacity style={[styles.card, { backgroundColor: colors.card }]} onPress={onPress} activeOpacity={0.85}>
+      <View style={[styles.imageContainer, { backgroundColor: colors.border }]}>
         <AdaptiveImage source={{ uri: image }} style={styles.image} alt={title} />
         {isPro && (
-          <View style={styles.proBadge}>
+          <View style={[styles.proBadge, { backgroundColor: colors.primary }]}>
             <Text style={styles.proText}>Pro</Text>
           </View>
         )}
@@ -63,19 +61,19 @@ export default function ProductCard({
             <Ionicons 
               name={isFavorite ? "heart" : "heart-outline"} 
               size={20} 
-              color={isFavorite ? "#e74c3c" : "#fff"} 
+              color={isFavorite ? colors.danger : "#fff"} 
             />
           </TouchableOpacity>
         )}
       </View>
       {brand && <Text style={[styles.brand, { color: colors.text }]} numberOfLines={1}>{brand}</Text>}
       <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>{title}</Text>
-      <Text style={styles.details} numberOfLines={1}>
+      <Text style={[styles.details, { color: colors.tabIconDefault }]} numberOfLines={1}>
         {size ? size + ' · ' : ''}{condition}
       </Text>
       <View style={styles.priceRow}>
         <Text style={[styles.price, { color: colors.text }]}>{price} €</Text>
-        {priceWithFees && <Text style={styles.priceWithFees}>{priceWithFees} € incl.</Text>}
+        {priceWithFees && <Text style={[styles.priceWithFees, { color: colors.primary }]}>{priceWithFees} € incl.</Text>}
       </View>
     </TouchableOpacity>
   );
@@ -85,7 +83,6 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     margin: 8,
-    backgroundColor: '#181A20',
     borderRadius: 16,
     overflow: 'hidden',
     minWidth: 160,
@@ -100,7 +97,6 @@ const styles = StyleSheet.create({
     position: 'relative',
     width: '100%',
     aspectRatio: 4/5,
-    backgroundColor: '#222',
   },
   image: {
     width: '100%',
@@ -112,7 +108,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     left: 8,
-    backgroundColor: '#00BFA6',
     borderRadius: 8,
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -166,7 +161,6 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   details: {
-    color: '#aaa',
     fontSize: 13,
     marginHorizontal: 8,
     marginBottom: 2,
@@ -183,7 +177,6 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   priceWithFees: {
-    color: '#00BFA6',
     fontWeight: 'bold',
     fontSize: 14,
   },

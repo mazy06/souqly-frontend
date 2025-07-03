@@ -365,7 +365,7 @@ const ProductImagePicker: React.FC<ProductImagePickerProps> = ({ imageIds, onCha
                 />
               )}
               <TouchableOpacity style={styles.removeBtn} onPress={() => removeImage(id)} disabled={uploading}>
-                <Ionicons name="close-circle" size={22} color="#ff4444" />
+                <Ionicons name="close-circle" size={22} color="#008080" />
               </TouchableOpacity>
             </View>
           );

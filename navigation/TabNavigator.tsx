@@ -19,6 +19,8 @@ export default function TabNavigator() {
         ),
         tabBarShowLabel: true,
         headerShown: false,
+        tabBarActiveTintColor: '#008080',
+        tabBarInactiveTintColor: '#8E8E93',
         tabBarStyle: ((route) => {
           const routeName = getFocusedRouteNameFromRoute(route) ?? '';
           if (routeName === 'ProductDetail') {

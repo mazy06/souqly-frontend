@@ -3,6 +3,7 @@ import { View, ScrollView, Image, TouchableOpacity, StyleSheet, Dimensions, Text
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import CustomHeader from '../components/CustomHeader';
+import { useTheme } from '../contexts/ThemeContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -11,17 +12,18 @@ type ProductImagesScreenRouteProp = RouteProp<{ params: { images: string[] } }, 
 export default function ProductImagesScreen() {
   const navigation = useNavigation();
   const route = useRoute<ProductImagesScreenRouteProp>();
+  const { colors, isDark } = useTheme();
   const images = route.params?.images || [];
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#000' }}>
-      <CustomHeader onBack={() => navigation.goBack()} color="#fff" backgroundColor="rgba(24,26,32,0.85)" />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <CustomHeader onBack={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {images.map((uri, idx) => (
           <Image
             key={idx}
             source={{ uri }}
-            style={styles.image}
+            style={[styles.image, { backgroundColor: isDark ? '#222' : '#f5f5f5' }]}
             resizeMode="contain"
           />
         ))}
@@ -31,6 +33,9 @@ export default function ProductImagesScreen() {
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   backBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -56,6 +61,5 @@ const styles = StyleSheet.create({
     width: screenWidth,
     height: screenWidth * 1.2,
     marginBottom: 24,
-    backgroundColor: '#222',
   },
 }); 

@@ -1,20 +1,23 @@
 import React from 'react';
 import { View, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function SearchBar({ value, onChangeText, onPressFavorite, placeholder }: { value: string; onChangeText: (t: string) => void; onPressFavorite?: () => void; placeholder?: string }) {
+  const { colors } = useTheme();
+  
   return (
-    <View style={styles.container}>
-      <Ionicons name="search" size={20} color="#888" style={styles.icon} />
+    <View style={[styles.container, { backgroundColor: colors.card }]}>
+      <Ionicons name="search" size={20} color={colors.tabIconDefault} style={styles.icon} />
       <TextInput
-        style={styles.input}
+        style={[styles.input, { color: colors.text }]}
         placeholder={placeholder || "Rechercher un article ou un membre"}
-        placeholderTextColor="#888"
+        placeholderTextColor={colors.tabIconDefault}
         value={value}
         onChangeText={onChangeText}
       />
       <TouchableOpacity onPress={onPressFavorite} style={styles.heartButton}>
-        <Ionicons name="heart-outline" size={22} color="#e74c3c" />
+        <Ionicons name="heart-outline" size={22} color={colors.danger} />
       </TouchableOpacity>
     </View>
   );
@@ -24,7 +27,6 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#23242a',
     borderRadius: 12,
     paddingHorizontal: 12,
     marginVertical: 10,
@@ -36,7 +38,6 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    color: '#fff',
     fontSize: 16,
   },
   heartButton: {

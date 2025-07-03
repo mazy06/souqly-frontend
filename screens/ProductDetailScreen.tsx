@@ -13,107 +13,20 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import Colors from '../constants/Colors';
-import { useColorScheme } from 'react-native';
+import { useTheme } from '../contexts/ThemeContext';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { HomeStackParamList } from './HomeScreen';
 import ProductService, { Product } from '../services/ProductService';
+import CustomHeader from '../components/CustomHeader';
 
 const { width: screenWidth } = Dimensions.get('window');
-
-// --- ProductHeader component ---
-function ProductHeader({ title, isFavorite, onBack, onToggleFavorite, onMenu }: {
-  title: string;
-  isFavorite: boolean;
-  onBack: () => void;
-  onToggleFavorite: () => void;
-  onMenu: () => void;
-}) {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  return (
-    <View
-      style={[
-        headerStyles.header,
-        {
-          backgroundColor: isDark
-            ? 'rgba(24,26,32,0.85)'
-            : 'rgba(255,255,255,0.85)',
-          borderBottomColor: isDark ? '#23242a' : '#e0e0e0',
-        },
-      ]}
-    >
-      <TouchableOpacity onPress={onBack} style={headerStyles.headerBtn}>
-        <Ionicons name="arrow-back" size={24} color={isDark ? '#fff' : '#181A20'} />
-      </TouchableOpacity>
-      <Text
-        style={[
-          headerStyles.headerTitle,
-          { color: isDark ? '#fff' : '#181A20' },
-        ]}
-        numberOfLines={1}
-      >
-        {title}
-      </Text>
-      <View style={headerStyles.headerRight}>
-        <TouchableOpacity onPress={onToggleFavorite} style={headerStyles.headerBtn}>
-          <Ionicons
-            name={isFavorite ? 'heart' : 'heart-outline'}
-            size={24}
-            color={isFavorite ? '#e74c3c' : isDark ? '#fff' : '#181A20'}
-          />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={onMenu} style={headerStyles.headerBtn}>
-          <MaterialIcons name="more-vert" size={24} color={isDark ? '#fff' : '#181A20'} />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-}
-
-const headerStyles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: Platform.OS === 'ios' ? 48 : 20,
-    paddingHorizontal: 8,
-    paddingBottom: 8,
-    borderBottomWidth: 0.5,
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 20,
-  },
-  headerBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginHorizontal: 2,
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-    fontWeight: '600',
-    fontSize: 18,
-    marginHorizontal: 8,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-});
-// --- End ProductHeader ---
 
 export default function ProductDetailScreen() {
   const navigation = useNavigation<StackNavigationProp<HomeStackParamList>>();
   const route = useRoute<RouteProp<HomeStackParamList, 'ProductDetail'>>();
   const { productId } = route.params;
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const { colors, isDark } = useTheme();
   
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
@@ -204,11 +117,13 @@ export default function ProductDetailScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ProductHeader
+      <CustomHeader
         title={product.title}
-        isFavorite={isFavorite}
         onBack={() => navigation.goBack()}
+        showFavorite={true}
+        isFavorite={isFavorite}
         onToggleFavorite={toggleFavorite}
+        showMenu={true}
         onMenu={() => {}}
       />
 
@@ -376,11 +291,14 @@ export default function ProductDetailScreen() {
         )}
       </ScrollView>
 
-      <View style={styles.footerBar}>
-        <TouchableOpacity style={styles.offerBtn}>
-          <Text style={styles.offerBtnText}>Faire une offre</Text>
+      <View style={[styles.footerBar, { 
+        backgroundColor: colors.background,
+        borderTopColor: colors.border 
+      }]}>
+        <TouchableOpacity style={[styles.offerBtn, { borderColor: colors.primary }]}>
+          <Text style={[styles.offerBtnText, { color: colors.primary }]}>Faire une offre</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.buyBtn}>
+        <TouchableOpacity style={[styles.buyBtn, { backgroundColor: colors.primary }]}>
           <Text style={styles.buyBtnText}>Acheter</Text>
         </TouchableOpacity>
       </View>
@@ -612,14 +530,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 24,
     paddingTop: 12,
-    backgroundColor: '#181A20',
     borderTopWidth: 1,
-    borderTopColor: '#23242a',
   },
   offerBtn: {
     flex: 1,
     borderWidth: 2,
-    borderColor: '#00BFA6',
     borderRadius: 10,
     paddingVertical: 14,
     marginRight: 10,
@@ -627,13 +542,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   offerBtnText: {
-    color: '#00BFA6',
     fontWeight: 'bold',
     fontSize: 16,
   },
   buyBtn: {
     flex: 1,
-    backgroundColor: '#00BFA6',
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',
@@ -644,7 +557,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   showMoreText: {
-    color: '#00BFA6',
     fontWeight: 'bold',
     marginTop: 4,
     fontSize: 15,

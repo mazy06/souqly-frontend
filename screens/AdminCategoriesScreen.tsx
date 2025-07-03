@@ -13,14 +13,14 @@ import {
   KeyboardAvoidingView,
   Platform
 } from 'react-native';
-import { useColorScheme } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import Colors from '../constants/Colors';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import CategoryService, { Category, CreateCategoryRequest, UpdateCategoryRequest } from '../services/CategoryService';
 import CrossPlatformCategoryManager from '../components/CrossPlatformCategoryManager';
 import IconPickerModal from '../components/IconPickerModal';
+import CustomHeader from '../components/CustomHeader';
+import { useTheme } from '../contexts/ThemeContext';
 
 // Type pour la navigation
 type ProfileStackParamList = {
@@ -33,8 +33,7 @@ type ModalType = 'add' | 'edit' | 'move' | null;
 
 const AdminCategoriesScreen = () => {
   const navigation = useNavigation<StackNavigationProp<ProfileStackParamList>>();
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'dark'];
+  const { colors } = useTheme();
   
   // États
   const [categories, setCategories] = useState<Category[]>([]);
@@ -271,7 +270,7 @@ const AdminCategoriesScreen = () => {
 
   // Affichage récursif
   const renderCategory = (cat: Category, level = 0) => (
-    <View key={cat.id} style={[styles.categoryRow, { paddingLeft: 16 * (level + 1) }]}> 
+    <View key={cat.id} style={[styles.categoryRow, { paddingLeft: 16 * (level + 1), backgroundColor: colors.card }]}> 
       {cat.iconName && (
         <MaterialCommunityIcons name={cat.iconName as any} size={22} color="#008080" style={{ marginRight: 8 }} />
       )}
@@ -309,18 +308,13 @@ const AdminCategoriesScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}> 
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>Gestion des catégories</Text>
-        <TouchableOpacity style={styles.addBtn} onPress={() => openAddModal()}>
-          <Ionicons name="add-circle" size={28} color="#008080" />
-        </TouchableOpacity>
-      </View>
+      <CustomHeader
+        title="Gestion des catégories"
+        onBack={() => navigation.goBack()}
+        showRightButton={true}
+        rightButtonIcon="add-circle"
+        onRightButtonPress={() => openAddModal()}
+      />
       
       {loading ? (
         <ActivityIndicator size="large" color="#008080" style={{ marginTop: 40 }} />
@@ -520,25 +514,7 @@ const AdminCategoriesScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 24,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 12,
-  },
-  backButton: {
-    marginRight: 12,
-    padding: 4,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    flex: 1,
-  },
-  addBtn: {
-    marginLeft: 8,
+    paddingTop: 100, // Espace pour le header flottant
   },
   treeContainer: {
     flex: 1,

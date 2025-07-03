@@ -10,16 +10,14 @@ import {
   Alert,
   Platform
 } from 'react-native';
-import { useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Colors from '../constants/Colors';
 import ProductService, { Product } from '../services/ProductService';
 import { useNavigation } from '@react-navigation/native';
 import CustomHeader from '../components/CustomHeader';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function MyProductsScreen() {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const { colors } = useTheme();
   
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -108,7 +106,7 @@ export default function MyProductsScreen() {
         <View style={styles.statusContainer}>
           <View style={[
             styles.statusBadge, 
-            { backgroundColor: item.status === 'ACTIVE' ? '#4CAF50' : '#FF9800' }
+            { backgroundColor: item.status === 'ACTIVE' ? colors.primary : '#FF9800' }
           ]}>
             <Text style={styles.statusText}>
               {item.status === 'ACTIVE' ? 'Actif' : 'Inactif'}
@@ -118,14 +116,14 @@ export default function MyProductsScreen() {
       </View>
       <View style={styles.actionsCol}>
         <TouchableOpacity
-          style={[styles.iconButton, { backgroundColor: '#008080' }]}
+          style={[styles.iconButton, { backgroundColor: colors.primary }]}
           // @ts-ignore
           onPress={() => navigation.navigate('ProductEdit', { productId: item.id })}
         >
           <Ionicons name="create-outline" size={20} color="#fff" />
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.iconButton, { backgroundColor: '#e74c3c' }]}
+          style={[styles.iconButton, { backgroundColor: colors.danger || '#e74c3c' }]}
           onPress={() => handleDeleteProduct(item.id)}
         >
           <Ionicons name="trash-outline" size={20} color="#fff" />
@@ -133,7 +131,7 @@ export default function MyProductsScreen() {
         <TouchableOpacity
           style={[
             styles.iconButton,
-            { backgroundColor: item.status === 'ACTIVE' ? '#FF9800' : '#4CAF50' }
+            { backgroundColor: item.status === 'ACTIVE' ? '#FF9800' : colors.primary }
           ]}
           onPress={() => toggleProductStatus(item.id)}
         >
@@ -160,7 +158,7 @@ export default function MyProductsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <CustomHeader title="Mes produits" onBack={() => navigation.goBack()} color={colors.text} backgroundColor={colors.background} />
+      <CustomHeader title="Mes produits" onBack={() => navigation.goBack()} />
       <Text style={[styles.title, { color: colors.text, marginTop: 60 }]}>Mes Produits</Text>
       
       <FlatList

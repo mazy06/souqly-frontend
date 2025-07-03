@@ -1,7 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
-import Colors from '../constants/Colors';
-import { useColorScheme } from 'react-native';
+import { useTheme } from '../contexts/ThemeContext';
 
 type Props = {
   title: string;
@@ -9,8 +8,7 @@ type Props = {
 };
 
 export default function PrimaryButton({ title, onPress }: Props) {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const { colors } = useTheme();
   return (
     <TouchableOpacity style={[styles.button, { backgroundColor: colors.button }]} onPress={onPress}>
       <Text style={[styles.text, { color: colors.text }]}>{title}</Text>
@@ -20,14 +18,13 @@ export default function PrimaryButton({ title, onPress }: Props) {
 
 const styles = StyleSheet.create({
   button: {
-    borderRadius: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
+    padding: 16,
+    borderRadius: 12,
     alignItems: 'center',
-    marginVertical: 8,
+    justifyContent: 'center',
   },
   text: {
-    fontWeight: 'bold',
     fontSize: 16,
+    fontWeight: 'bold',
   },
 }); 
