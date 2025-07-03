@@ -1,20 +1,27 @@
--- Script pour corriger le type des colonnes title et description
--- de bytea vers text pour permettre l'utilisation de la fonction lower()
+-- Fix column types from bytea to text
+-- This script converts the title and description columns from bytea to text
 
--- Vérifier les types actuels
+-- First, create a backup of the current data
+CREATE TABLE products_backup AS SELECT * FROM products;
+
+-- Convert title column from bytea to text
+ALTER TABLE products ALTER COLUMN title TYPE text USING convert_from(title, 'UTF8');
+
+-- Convert description column from bytea to text  
+ALTER TABLE products ALTER COLUMN description TYPE text USING convert_from(description, 'UTF8');
+
+-- Verify the changes
 SELECT column_name, data_type 
 FROM information_schema.columns 
 WHERE table_name = 'products' 
 AND column_name IN ('title', 'description');
 
--- Corriger le type de la colonne title
-ALTER TABLE products ALTER COLUMN title TYPE text USING title::text;
+-- Ajout d'une colonne booléenne is_active pour la gestion des produits actifs/inactifs
+ALTER TABLE products ADD COLUMN IF NOT EXISTS is_active boolean;
 
--- Corriger le type de la colonne description  
-ALTER TABLE products ALTER COLUMN description TYPE text USING description::text;
+-- Mettre à jour la colonne pour les produits existants
+UPDATE products SET is_active = (status = 'ACTIVE');
 
--- Vérifier que les corrections ont été appliquées
-SELECT column_name, data_type 
-FROM information_schema.columns 
-WHERE table_name = 'products' 
-AND column_name IN ('title', 'description'); 
+-- Mettre la colonne NOT NULL avec une valeur par défaut à true
+ALTER TABLE products ALTER COLUMN is_active SET DEFAULT true;
+ALTER TABLE products ALTER COLUMN is_active SET NOT NULL; 

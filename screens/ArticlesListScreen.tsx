@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, FlatList, Text, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, ScrollView, StyleSheet, FlatList, Text, RefreshControl, ActivityIndicator, TouchableOpacity } from 'react-native';
 import ProductCard from '../components/ProductCard';
 import PrimaryButton from '../components/PrimaryButton';
 import { useAuth } from '../contexts/AuthContext';
@@ -39,25 +39,32 @@ export default function ArticlesListScreen({ navigation }: { navigation: any }) 
         page: 0,
         pageSize: 20,
         sortBy: 'createdAt',
-        sortOrder: 'desc'
+        sortOrder: 'desc',
+        status: 'ACTIVE'
       });
-      setProducts(response.content);
       
-      // Charger les URLs des images pour chaque produit
-      const urls: {[key: number]: string} = {};
-      for (const product of response.content) {
-        try {
-          const imageUrl = await ProductService.getProductImageUrl(product);
-          if (imageUrl) {
-            urls[product.id] = imageUrl;
+      if (response.content.length === 0) {
+        setError('Aucun produit disponible pour le moment');
+      } else {
+        setProducts(response.content);
+        
+        // Charger les URLs des images pour chaque produit
+        const urls: {[key: number]: string} = {};
+        for (const product of response.content) {
+          try {
+            const imageUrl = await ProductService.getProductImageUrl(product);
+            if (imageUrl) {
+              urls[product.id] = imageUrl;
+            }
+          } catch (error) {
+            // Erreur silencieuse pour le chargement d'image
           }
-        } catch (error) {
-          // Erreur silencieuse pour le chargement d'image
         }
+        setImageUrls(urls);
       }
-      setImageUrls(urls);
     } catch (err: any) {
-      setError('Impossible de charger les produits');
+      console.error('[ArticlesListScreen] Erreur lors du chargement des produits:', err);
+      setError('Impossible de charger les produits. Veuillez réessayer plus tard.');
     } finally {
       setLoading(false);
     }
@@ -107,11 +114,8 @@ export default function ArticlesListScreen({ navigation }: { navigation: any }) 
 
   if (error) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <Text style={[styles.errorText, { color: colors.text }]}>{error}</Text>
-        <Text style={[styles.retryText, { color: colors.tabIconDefault }]}>
-          Tire vers le bas pour réessayer
-        </Text>
       </View>
     );
   }
@@ -194,8 +198,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 16,
   },
-  retryText: {
+  retryButton: {
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  retryButtonText: {
     fontSize: 14,
     fontWeight: 'bold',
+    color: 'white',
   },
 }); 

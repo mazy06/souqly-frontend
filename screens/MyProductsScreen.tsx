@@ -14,6 +14,8 @@ import { useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../constants/Colors';
 import ProductService, { Product } from '../services/ProductService';
+import { useNavigation } from '@react-navigation/native';
+import CustomHeader from '../components/CustomHeader';
 
 export default function MyProductsScreen() {
   const colorScheme = useColorScheme();
@@ -22,6 +24,7 @@ export default function MyProductsScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const navigation = useNavigation();
 
   const loadMyProducts = async () => {
     try {
@@ -55,12 +58,39 @@ export default function MyProductsScreen() {
     }
   };
 
+  const handleDeleteProduct = (productId: number) => {
+    Alert.alert(
+      'Supprimer le produit',
+      'Es-tu sûr de vouloir supprimer ce produit ? Cette action est irréversible.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer', style: 'destructive',
+          onPress: async () => {
+            try {
+              await ProductService.deleteProduct(productId);
+              setProducts(prev => prev.filter(p => p.id !== productId));
+              Alert.alert('Succès', 'Produit supprimé avec succès');
+            } catch (err) {
+              Alert.alert('Erreur', 'Impossible de supprimer le produit');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   useEffect(() => {
     loadMyProducts();
   }, []);
 
   const renderProduct = ({ item }: { item: Product }) => (
-    <View style={[styles.productCard, { backgroundColor: colors.card }]}>
+    <TouchableOpacity
+      style={[styles.productCard, { backgroundColor: colors.card }]}
+      // @ts-ignore
+      onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
+      activeOpacity={0.85}
+    >
       <View style={styles.productInfo}>
         <Text style={[styles.productTitle, { color: colors.text }]} numberOfLines={2}>
           {item.title}
@@ -68,6 +98,13 @@ export default function MyProductsScreen() {
         <Text style={[styles.productPrice, { color: colors.primary }]}>
           {item.price} €
         </Text>
+        {item.seller && (
+          <View style={styles.ownerBlock}>
+            <Text style={styles.ownerLabel}>Propriétaire :</Text>
+            <Text style={styles.ownerName}>{item.seller.firstName} {item.seller.lastName}</Text>
+            {item.seller.email && <Text style={styles.ownerEmail}>{item.seller.email}</Text>}
+          </View>
+        )}
         <View style={styles.statusContainer}>
           <View style={[
             styles.statusBadge, 
@@ -79,24 +116,35 @@ export default function MyProductsScreen() {
           </View>
         </View>
       </View>
-      
-      <TouchableOpacity 
-        style={[
-          styles.toggleButton, 
-          { backgroundColor: item.status === 'ACTIVE' ? '#FF9800' : '#4CAF50' }
-        ]}
-        onPress={() => toggleProductStatus(item.id)}
-      >
-        <Ionicons 
-          name={item.status === 'ACTIVE' ? 'eye-off' : 'eye'} 
-          size={20} 
-          color="white" 
-        />
-        <Text style={styles.toggleButtonText}>
-          {item.status === 'ACTIVE' ? 'Désactiver' : 'Activer'}
-        </Text>
-      </TouchableOpacity>
-    </View>
+      <View style={styles.actionsCol}>
+        <TouchableOpacity
+          style={[styles.iconButton, { backgroundColor: '#008080' }]}
+          // @ts-ignore
+          onPress={() => navigation.navigate('ProductEdit', { productId: item.id })}
+        >
+          <Ionicons name="create-outline" size={20} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.iconButton, { backgroundColor: '#e74c3c' }]}
+          onPress={() => handleDeleteProduct(item.id)}
+        >
+          <Ionicons name="trash-outline" size={20} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.iconButton,
+            { backgroundColor: item.status === 'ACTIVE' ? '#FF9800' : '#4CAF50' }
+          ]}
+          onPress={() => toggleProductStatus(item.id)}
+        >
+          <Ionicons
+            name={item.status === 'ACTIVE' ? 'eye-off' : 'eye'}
+            size={20}
+            color="#fff"
+          />
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
   );
 
   if (loading) {
@@ -112,7 +160,8 @@ export default function MyProductsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.title, { color: colors.text }]}>Mes Produits</Text>
+      <CustomHeader title="Mes produits" onBack={() => navigation.goBack()} color={colors.text} backgroundColor={colors.background} />
+      <Text style={[styles.title, { color: colors.text, marginTop: 60 }]}>Mes Produits</Text>
       
       <FlatList
         data={products}
@@ -190,20 +239,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  toggleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginLeft: 12,
-  },
-  toggleButtonText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 4,
-  },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
@@ -224,5 +259,35 @@ const styles = StyleSheet.create({
   emptySubtext: {
     fontSize: 14,
     textAlign: 'center',
+  },
+  ownerBlock: {
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  ownerLabel: {
+    fontSize: 12,
+    color: '#888',
+  },
+  ownerName: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  ownerEmail: {
+    fontSize: 12,
+    color: '#666',
+  },
+  actionsCol: {
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginLeft: 12,
+  },
+  iconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
   },
 }); 

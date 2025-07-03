@@ -212,7 +212,11 @@ export default function ProductDetailScreen() {
         onMenu={() => {}}
       />
 
-      <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        ref={scrollViewRef}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 120, flexGrow: 1 }}
+      >
         {/* Image Gallery */}
         <View style={styles.galleryContainer}>
           {product.images && product.images.length > 0 ? (
@@ -227,11 +231,21 @@ export default function ProductDetailScreen() {
                   setCurrentImageIndex(index);
                 }}
                 renderItem={({ item }) => (
-                  <Image 
-                    source={{ uri: ProductService.getImageUrl(item.id) }} 
-                    style={styles.galleryImage} 
-                    resizeMode="cover" 
-                  />
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => navigation.navigate(
+                      // @ts-ignore
+                      'ProductImages',
+                      { images: (product.images ?? []).map(img => ProductService.getImageUrl(img.id)) }
+                    )}
+                    style={{ width: screenWidth, height: 400 }}
+                  >
+                    <Image
+                      source={{ uri: ProductService.getImageUrl(item.id) }}
+                      style={styles.galleryImage}
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
                 )}
                 keyExtractor={(item) => item.id.toString()}
               />

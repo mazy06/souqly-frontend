@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, RefreshControl, ActivityIndicator, Text, StyleSheet, FlatList } from 'react-native';
+import { View, ScrollView, RefreshControl, ActivityIndicator, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useColorScheme } from 'react-native';
@@ -73,7 +73,8 @@ export default function HomeScreen() {
         setImageUrls(urls);
       }
     } catch (err) {
-      setError('Impossible de charger les produits');
+      console.error('[HomeScreen] Erreur lors du chargement des produits:', err);
+      setError('Impossible de charger les produits. Veuillez réessayer plus tard.');
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -114,7 +115,7 @@ export default function HomeScreen() {
       })
       .catch((err) => {
         console.error('[HomeScreen] Erreur lors du chargement des produits:', err, err?.message, err?.stack);
-        setError('Impossible de charger les produits');
+        setError('Impossible de charger les produits. Veuillez réessayer plus tard.');
       })
       .finally(() => {
         setLoading(false);

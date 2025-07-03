@@ -2,6 +2,7 @@ import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/
 import ArticlesListScreen from '../screens/ArticlesListScreen';
 import ProductDetailScreen from '../screens/ProductDetailScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
+import ProductImagesScreen from '../screens/ProductImagesScreen';
 
 const Stack = createStackNavigator();
 
@@ -17,6 +18,7 @@ export default function HomeStack() {
       <Stack.Screen name="ArticlesList" component={ArticlesListScreen} />
       <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
       <Stack.Screen name="Favorites" component={FavoritesScreen} options={{ title: 'Favoris' }} />
+      <Stack.Screen name="ProductImages" component={ProductImagesScreen} />
     </Stack.Navigator>
   );
 } 

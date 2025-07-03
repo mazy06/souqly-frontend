@@ -62,6 +62,7 @@ export interface ProductFilters {
   pageSize?: number;
   sortBy?: 'price' | 'createdAt' | 'favoriteCount';
   sortOrder?: 'asc' | 'desc';
+  status?: string;
 }
 
 class ProductService {
@@ -88,16 +89,31 @@ class ProductService {
     if (filters.pageSize) queryParams.append('size', filters.pageSize.toString());
     if (filters.sortBy) queryParams.append('sortBy', filters.sortBy);
     if (filters.sortOrder) queryParams.append('sortOrder', filters.sortOrder);
+    if (filters.status) queryParams.append('status', filters.status);
 
     const url = `${this.baseUrl}?${queryParams.toString()}`;
-    const result = await ApiService.get<{
-      content: Product[];
-      totalElements: number;
-      totalPages: number;
-      currentPage: number;
-      size: number;
-    }>(url, false);
-    return result;
+    
+    try {
+      const result = await ApiService.get<{
+        content: Product[];
+        totalElements: number;
+        totalPages: number;
+        currentPage: number;
+        size: number;
+      }>(url, false);
+      return result;
+    } catch (error) {
+      console.error('[ProductService] Erreur lors de la récupération des produits:', error);
+      
+      // Retourner une réponse vide en cas d'erreur pour éviter le crash de l'app
+      return {
+        content: [],
+        totalElements: 0,
+        totalPages: 0,
+        currentPage: 0,
+        size: filters.pageSize || 20
+      };
+    }
   }
 
   // Récupérer un produit par ID
