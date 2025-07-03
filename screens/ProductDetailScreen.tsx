@@ -271,7 +271,7 @@ export default function ProductDetailScreen() {
 
         {/* Price & Main Info Block */}
         <View style={styles.priceBlock}>
-          <Text style={styles.price}>{product.price.toFixed(2)} €</Text>
+          <Text style={[styles.price, { color: colors.text }]}>{product.price.toFixed(2)} €</Text>
           {product.priceWithFees && (
             <View style={styles.priceProtectionRow}>
               <Text style={styles.priceWithProtection}>
@@ -286,36 +286,36 @@ export default function ProductDetailScreen() {
               Frais de port : {product.shippingInfo || "à définir"}
             </Text>
           </View>
-          <Text style={styles.productMeta}>
+          <Text style={[styles.productMeta, { color: colors.tabIconDefault }]}>
             {product.size || 'Taille non spécifiée'} · {product.condition} ·
             {product.brand && <Text style={styles.brandLink}> {product.brand}</Text>}
           </Text>
         </View>
 
         {/* Seller Info */}
-        <View style={styles.sellerBlock}>
+        <View style={[styles.sellerBlock, { backgroundColor: colors.card }]}>
           <View style={styles.sellerAvatar}>
             <Ionicons name="person" size={32} color="#ccc" />
           </View>
           <View style={styles.sellerInfo}>
-            <Text style={styles.sellerName}>
+            <Text style={[styles.sellerName, { color: colors.text }]}>
               {product.seller ? 
                 `${product.seller.firstName} ${product.seller.lastName}` : 
                 'Vendeur'
               }
             </Text>
-            <Text style={styles.sellerLocation}>Localisation non spécifiée</Text>
-            <Text style={styles.sellerMemberSince}>Membre depuis récemment</Text>
+            <Text style={[styles.sellerLocation, { color: colors.tabIconDefault }]}>Localisation non spécifiée</Text>
+            <Text style={[styles.sellerMemberSince, { color: colors.tabIconDefault }]}>Membre depuis récemment</Text>
           </View>
           <TouchableOpacity style={styles.contactButton} onPress={handleContactSeller}>
-            <Text style={styles.contactButtonText}>Contacter</Text>
+            <Ionicons name="chatbubble-outline" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
 
         {/* Description */}
         <View style={styles.descriptionBlock}>
-          <Text style={styles.descriptionTitle}>Description</Text>
-          <Text style={styles.descriptionText} numberOfLines={showFullDesc ? undefined : 3}>
+          <Text style={[styles.descriptionTitle, { color: colors.text }]}>Description</Text>
+          <Text style={[styles.descriptionText, { color: colors.text }]} numberOfLines={showFullDesc ? undefined : 3}>
             {product.description}
           </Text>
           <TouchableOpacity onPress={() => setShowFullDesc(!showFullDesc)}>
@@ -327,29 +327,29 @@ export default function ProductDetailScreen() {
 
         {/* Category */}
         <View style={styles.tagsBlock}>
-          <Text style={styles.tagsTitle}>Catégorie</Text>
+          <Text style={[styles.tagsTitle, { color: colors.text }]}>Catégorie</Text>
           <View style={styles.tagsContainer}>
             {product.category && (
-              <View style={styles.tag}>
-                <Text style={styles.tagText}>{product.category.label}</Text>
+              <View style={[styles.tag, { backgroundColor: colors.card }]}>
+                <Text style={[styles.tagText, { color: colors.text }]}>{product.category.label}</Text>
               </View>
             )}
           </View>
         </View>
 
         {/* Tabs */}
-        <View style={styles.tabsRow}>
+        <View style={[styles.tabsRow, { borderBottomColor: colors.border }]}>
           <TouchableOpacity
             style={[styles.tabBtn, tab === 'dressing' && styles.tabBtnActive]}
             onPress={() => setTab('dressing')}
           >
-            <Text style={[styles.tabText, tab === 'dressing' && styles.tabTextActive]}>Dressing du membre</Text>
+            <Text style={[styles.tabText, { color: colors.tabIconDefault }, tab === 'dressing' && styles.tabTextActive]}>Dressing du membre</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tabBtn, tab === 'similaires' && styles.tabBtnActive]}
             onPress={() => setTab('similaires')}
           >
-            <Text style={[styles.tabText, tab === 'similaires' && styles.tabTextActive]}>Articles similaires</Text>
+            <Text style={[styles.tabText, { color: colors.tabIconDefault }, tab === 'similaires' && styles.tabTextActive]}>Articles similaires</Text>
           </TouchableOpacity>
         </View>
         <FlatList
@@ -359,12 +359,12 @@ export default function ProductDetailScreen() {
           keyExtractor={item => item.id.toString()}
           contentContainerStyle={styles.flatListContent}
           renderItem={({ item }) => (
-            <View style={styles.miniCard}>
+            <View style={[styles.miniCard, { backgroundColor: colors.card }]}>
               <Image source={{ uri: item.image }} style={styles.miniCardImage} resizeMode="cover" />
-              <Text style={styles.miniCardBrand}>{item.brand}</Text>
+              <Text style={[styles.miniCardBrand, { color: colors.text }]}>{item.brand}</Text>
               <View style={styles.miniCardLikes}>
-                <Ionicons name="heart-outline" size={14} color="#fff" />
-                <Text style={styles.miniCardLikesText}>{item.likes}</Text>
+                <Ionicons name="heart-outline" size={14} color={colors.primary} />
+                <Text style={[styles.miniCardLikesText, { color: colors.text }]}>{item.likes}</Text>
               </View>
             </View>
           )}
@@ -434,7 +434,6 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#fff',
     marginBottom: 2,
   },
   priceProtectionRow: {
@@ -508,16 +507,17 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   tag: {
-    backgroundColor: '#f0f0f0',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
     marginRight: 8,
     marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   tagText: {
     fontSize: 14,
-    color: '#666',
+    fontWeight: '500',
   },
   section: {
     marginBottom: 24,
@@ -548,7 +548,6 @@ const styles = StyleSheet.create({
   sellerBlock: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#23242a',
     borderRadius: 12,
     padding: 16,
     marginHorizontal: 16,
@@ -565,11 +564,11 @@ const styles = StyleSheet.create({
   },
   sellerInfo: {
     flex: 1,
+    marginLeft: 12,
   },
   sellerName: {
     fontSize: 17,
     fontWeight: 'bold',
-    color: '#fff',
     marginBottom: 2,
   },
   sellerRatingRow: {
@@ -591,25 +590,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   sellerLocation: {
-    color: '#bbb',
     fontSize: 13,
   },
   sellerMemberSince: {
-    color: '#bbb',
     fontSize: 13,
     opacity: 0.7,
   },
   contactButton: {
     backgroundColor: '#00BFA6',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginLeft: 10,
-  },
-  contactButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 15,
   },
   footerBar: {
     flexDirection: 'row',
@@ -657,6 +651,7 @@ const styles = StyleSheet.create({
   },
   descriptionBlock: {
     marginBottom: 24,
+    paddingHorizontal: 16,
   },
   descriptionTitle: {
     fontSize: 18,
@@ -669,6 +664,7 @@ const styles = StyleSheet.create({
   },
   tagsBlock: {
     marginBottom: 24,
+    paddingHorizontal: 16,
   },
   tagsTitle: {
     fontSize: 18,
@@ -680,7 +676,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#23242a',
   },
   tabBtn: {
     flex: 1,
@@ -693,7 +688,6 @@ const styles = StyleSheet.create({
     borderBottomColor: '#00BFA6',
   },
   tabText: {
-    color: '#bbb',
     fontWeight: '600',
     fontSize: 15,
   },
@@ -707,7 +701,6 @@ const styles = StyleSheet.create({
   miniCard: {
     width: 120,
     marginRight: 12,
-    backgroundColor: '#23242a',
     borderRadius: 12,
     overflow: 'hidden',
     alignItems: 'center',
@@ -720,7 +713,6 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 12,
   },
   miniCardBrand: {
-    color: '#fff',
     fontWeight: 'bold',
     fontSize: 14,
     marginTop: 6,
@@ -731,7 +723,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   miniCardLikesText: {
-    color: '#fff',
     marginLeft: 4,
     fontSize: 13,
   },
