@@ -120,6 +120,7 @@ class TokenService {
    */
   async clearTokens(): Promise<void> {
     try {
+      console.log('→ [TokenService] Suppression des tokens');
       await Promise.all([
         AsyncStorage.removeItem(TokenService.ACCESS_TOKEN_KEY),
         AsyncStorage.removeItem(TokenService.REFRESH_TOKEN_KEY),
@@ -127,7 +128,9 @@ class TokenService {
         AsyncStorage.removeItem(TokenService.USER_ID_KEY),
         AsyncStorage.removeItem(TokenService.USER_ROLE_KEY),
       ]);
+      console.log('→ [TokenService] Tokens supprimés');
     } catch (error) {
+      console.log('→ [TokenService] Erreur lors de la suppression des tokens:', error);
       throw new Error('Impossible de supprimer les tokens');
     }
   }

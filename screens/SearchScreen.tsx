@@ -36,7 +36,7 @@ function CategoryListItem({ item, onPress, style }: CategoryListItemProps) {
       <Text style={[styles.label, { color: colors.text }]}>{item.label}</Text>
       {item.badgeText && (
         <View style={[styles.badge, { backgroundColor: colors.primary }]}> 
-          <Text style={[styles.badgeText, { color: colors.text }]}>{item.badgeText}</Text>
+          <Text style={[styles.badgeText, { color: 'white' }]}>{item.badgeText}</Text>
         </View>
       )}
       <Ionicons name="chevron-forward" size={22} color={colors.text + '99'} style={styles.chevron} />
@@ -157,7 +157,6 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: '#fff',
-    fontWeight: 'bold',
     fontSize: 13,
   },
   chevron: {

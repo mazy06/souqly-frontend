@@ -11,11 +11,11 @@ export default function VisitorBadge({ onSignup }: { onSignup: () => void }) {
   if (!isGuest) return null;
 
   return (
-    <View style={[styles.badge, { backgroundColor: colors.card + 'cc' }]}> 
-      <Ionicons name="person-circle-outline" size={20} color="#bbb" style={{ marginRight: 6 }} />
-      <Text style={[styles.text, { color: '#888' }]}>Mode visiteur</Text>
+    <View style={[styles.badge, { backgroundColor: colors.card + '99' }]}> 
+      <Ionicons name="person-circle-outline" size={16} color="#bbb" style={{ marginRight: 4 }} />
+      <Text style={[styles.text, { color: colors.text + '99', fontSize: 12, marginRight: 6 }]}>Mode visiteur</Text>
       <TouchableOpacity onPress={onSignup}>
-        <Text style={styles.link}>Créer un compte</Text>
+        <Text style={[styles.link, { color: colors.primary + 'cc', fontWeight: '400', fontSize: 12 }]}>Créer un compte</Text>
       </TouchableOpacity>
     </View>
   );
@@ -25,18 +25,18 @@ const styles = StyleSheet.create({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
     borderRadius: 8,
-    marginHorizontal: 16,
+    alignSelf: 'center',
     marginVertical: 8,
   },
   text: {
-    fontSize: 14,
-    marginRight: 8,
+    fontSize: 12,
+    marginRight: 6,
   },
   link: {
-    fontSize: 14,
-    color: '#00BFA6',
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '400',
   },
 }); 

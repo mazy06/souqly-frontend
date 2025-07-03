@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Modal, Pressable, Alert } from 'react-native';
-import Colors from '../constants/Colors';
-import { useColorScheme } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 const images = [
   'https://images.unsplash.com/photo-1512436991641-6745cdb1723f',
@@ -14,8 +13,7 @@ const images = [
 ];
 
 export default function AuthLandingScreen({ navigation }: { navigation: any }) {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'dark'];
+  const { colors, isDark } = useTheme();
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const { guest, signInWithApple, signInWithGoogle, signInWithFacebook } = useAuth();
@@ -98,27 +96,27 @@ export default function AuthLandingScreen({ navigation }: { navigation: any }) {
             <Text style={[styles.modalSubtitle, { color: colors.text }]}>Utilise ton identifiant Apple, c'est plus rapide.</Text>
             
             <TouchableOpacity 
-              style={[styles.socialButton, loading && styles.socialButtonDisabled]}
+              style={[styles.socialButton, { backgroundColor: isDark ? '#222' : '#f0f0f0' }, loading && styles.socialButtonDisabled]}
               onPress={() => handleSocialAuth('apple')}
               disabled={loading}
             >
-              <Text style={styles.socialButtonText}>🍎 Continuer avec Apple</Text>
+              <Text style={[styles.socialButtonText, { color: isDark ? '#fff' : '#222' }]}>🍎 Continuer avec Apple</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={[styles.socialButton, loading && styles.socialButtonDisabled]}
+              style={[styles.socialButton, { backgroundColor: isDark ? '#222' : '#f0f0f0' }, loading && styles.socialButtonDisabled]}
               onPress={() => handleSocialAuth('google')}
               disabled={loading}
             >
-              <Text style={styles.socialButtonText}>🔍 Continuer avec Google</Text>
+              <Text style={[styles.socialButtonText, { color: isDark ? '#fff' : '#222' }]}>🔍 Continuer avec Google</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={[styles.socialButton, loading && styles.socialButtonDisabled]}
+              style={[styles.socialButton, { backgroundColor: isDark ? '#222' : '#f0f0f0' }, loading && styles.socialButtonDisabled]}
               onPress={() => handleSocialAuth('facebook')}
               disabled={loading}
             >
-              <Text style={styles.socialButtonText}>📘 Continuer avec Facebook</Text>
+              <Text style={[styles.socialButtonText, { color: isDark ? '#fff' : '#222' }]}>📘 Continuer avec Facebook</Text>
             </TouchableOpacity>
             
             <TouchableOpacity onPress={() => navigation.navigate('Login')}>
@@ -152,7 +150,7 @@ const styles = StyleSheet.create({
   modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, alignItems: 'center' },
   modalTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 8 },
   modalSubtitle: { fontSize: 16, marginBottom: 20, textAlign: 'center' },
-  socialButton: { width: '100%', backgroundColor: '#222', padding: 14, borderRadius: 8, alignItems: 'center', marginVertical: 6 },
+  socialButton: { width: '100%', padding: 14, borderRadius: 8, alignItems: 'center', marginVertical: 6 },
   socialButtonDisabled: { backgroundColor: '#555' },
   socialButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   emailLink: { marginTop: 18, fontSize: 16, textAlign: 'center', textDecorationLine: 'underline' },

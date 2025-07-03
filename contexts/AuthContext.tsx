@@ -89,14 +89,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      // Appeler la méthode de déconnexion du service
+      console.log('→ [AuthContext] Début logout');
       await AuthService.logout();
+      console.log('→ [AuthContext] Appel AuthService.logout() terminé');
     } catch (error) {
+      console.log('→ [AuthContext] Erreur dans logout:', error);
     } finally {
-      // Toujours nettoyer l'état local
       setIsAuthenticated(false);
       setIsGuest(false);
       setUser(null);
+      console.log('→ [AuthContext] État local réinitialisé');
     }
   };
 

@@ -2,13 +2,12 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import PrimaryButton from '../components/PrimaryButton';
 import { useAuth } from '../contexts/AuthContext';
-import Colors from '../constants/Colors';
-import { useColorScheme } from 'react-native';
+import { useTheme } from '../contexts/ThemeContext';
+import CustomHeader from '../components/CustomHeader';
 
 export default function LoginScreen({ navigation }: { navigation: any }) {
   const { signInWithEmail, signUpWithEmail } = useAuth();
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const { colors } = useTheme();
   
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
@@ -42,79 +41,73 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
   };
 
   return (
-    <ScrollView contentContainerStyle={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.title, { color: colors.text }]}>
-        {isLogin ? 'Connexion' : 'Inscription'}
-      </Text>
-      <Text style={[styles.subtitle, { color: colors.text }]}>
-        {isLogin ? 'Bienvenue sur Souqly' : 'Créez votre compte Souqly'}
-      </Text>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <CustomHeader onBack={() => navigation.goBack()} />
+      <ScrollView contentContainerStyle={[styles.container, { backgroundColor: colors.background }]}>
+        <Text style={[styles.title, { color: colors.text }]}>
+          {isLogin ? 'Connexion' : 'Inscription'}
+        </Text>
+        <Text style={[styles.subtitle, { color: colors.text }]}>
+          {isLogin ? 'Bienvenue sur Souqly' : 'Créez votre compte Souqly'}
+        </Text>
 
-      {!isLogin && (
+        {!isLogin && (
+          <TextInput
+            style={[styles.input, { 
+              backgroundColor: colors.card, 
+              color: colors.text, 
+              borderColor: colors.border 
+            }]}
+            placeholder="Nom complet"
+            placeholderTextColor={colors.text + '80'}
+            value={name}
+            onChangeText={setName}
+            autoCapitalize="words"
+          />
+        )}
+
         <TextInput
           style={[styles.input, { 
             backgroundColor: colors.card, 
             color: colors.text, 
             borderColor: colors.border 
           }]}
-          placeholder="Nom complet"
+          placeholder="Adresse e-mail"
           placeholderTextColor={colors.text + '80'}
-          value={name}
-          onChangeText={setName}
-          autoCapitalize="words"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
         />
-      )}
 
-      <TextInput
-        style={[styles.input, { 
-          backgroundColor: colors.card, 
-          color: colors.text, 
-          borderColor: colors.border 
-        }]}
-        placeholder="Adresse e-mail"
-        placeholderTextColor={colors.text + '80'}
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
+        <TextInput
+          style={[styles.input, { 
+            backgroundColor: colors.card, 
+            color: colors.text, 
+            borderColor: colors.border 
+          }]}
+          placeholder="Mot de passe"
+          placeholderTextColor={colors.text + '80'}
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
 
-      <TextInput
-        style={[styles.input, { 
-          backgroundColor: colors.card, 
-          color: colors.text, 
-          borderColor: colors.border 
-        }]}
-        placeholder="Mot de passe"
-        placeholderTextColor={colors.text + '80'}
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
+        <PrimaryButton 
+          title={isLogin ? 'Se connecter' : 'S\'inscrire'} 
+          onPress={handleSubmit}
+        />
 
-      <PrimaryButton 
-        title={isLogin ? 'Se connecter' : 'S\'inscrire'} 
-        onPress={handleSubmit}
-      />
-
-      <TouchableOpacity 
-        style={styles.switchButton}
-        onPress={() => setIsLogin(!isLogin)}
-      >
-        <Text style={[styles.switchText, { color: '#3ba6a6' }]}>
-          {isLogin ? 'Pas encore de compte ? S\'inscrire' : 'Déjà un compte ? Se connecter'}
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity 
-        style={styles.backButton}
-        onPress={() => navigation.goBack()}
-      >
-        <Text style={[styles.backText, { color: colors.text + '80' }]}>
-          ← Retour
-        </Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <TouchableOpacity 
+          style={styles.switchButton}
+          onPress={() => setIsLogin(!isLogin)}
+        >
+          <Text style={[styles.switchText, { color: '#3ba6a6' }]}>
+            {isLogin ? 'Pas encore de compte ? S\'inscrire' : 'Déjà un compte ? Se connecter'}
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -153,14 +146,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     textDecorationLine: 'underline',
-  },
-  backButton: {
-    position: 'absolute',
-    top: 50,
-    left: 20,
-    padding: 10,
-  },
-  backText: {
-    fontSize: 16,
   },
 }); 

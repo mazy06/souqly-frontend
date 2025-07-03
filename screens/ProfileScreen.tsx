@@ -20,29 +20,14 @@ export default function ProfileScreen() {
   const { colors, themeMode, isDark } = useTheme();
   const [themeModalVisible, setThemeModalVisible] = useState(false);
 
-  const handleLogout = () => {
-    Alert.alert(
-      'Déconnexion',
-      'Êtes-vous sûr de vouloir vous déconnecter ?',
-      [
-        {
-          text: 'Annuler',
-          style: 'cancel',
-        },
-        {
-          text: 'Déconnexion',
-          style: 'destructive',
-          onPress: () => {
-            logout();
-            // Navigation vers l'écran de login ou landing
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'AuthLanding' as any }],
-            });
-          },
-        },
-      ]
-    );
+  const handleLogout = async () => {
+    console.log('→ [ProfileScreen] handleLogout appelé');
+    await logout();
+    console.log('→ [ProfileScreen] logout terminé, navigation vers AuthLanding');
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'AuthLanding' as any }],
+    });
   };
 
   const getThemeIcon = () => {
