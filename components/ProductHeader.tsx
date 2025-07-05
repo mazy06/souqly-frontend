@@ -6,11 +6,12 @@ import { useNavigation } from '@react-navigation/native';
 interface ProductHeaderProps {
   title: string;
   isFavorite?: boolean;
+  favoritesCount?: number;
   onToggleFavorite?: () => void;
   onShare?: () => void;
 }
 
-export default function ProductHeader({ title, isFavorite, onToggleFavorite, onShare }: ProductHeaderProps) {
+export default function ProductHeader({ title, isFavorite, favoritesCount = 0, onToggleFavorite, onShare }: ProductHeaderProps) {
   const navigation = useNavigation();
   return (
     <View style={styles.header}>
@@ -22,9 +23,14 @@ export default function ProductHeader({ title, isFavorite, onToggleFavorite, onS
         <TouchableOpacity style={styles.iconBtn} onPress={onShare}>
           <Ionicons name="share-outline" size={22} color="#181A20" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.iconBtn} onPress={onToggleFavorite}>
-          <Ionicons name={isFavorite ? 'heart' : 'heart-outline'} size={22} color={isFavorite ? '#e74c3c' : '#181A20'} />
-        </TouchableOpacity>
+        <View style={styles.favoriteContainer}>
+          <TouchableOpacity style={styles.iconBtn} onPress={onToggleFavorite}>
+            <Ionicons name={isFavorite ? 'heart' : 'heart-outline'} size={22} color={isFavorite ? '#e74c3c' : '#181A20'} />
+            <View style={styles.favoritesBadge}>
+              <Text style={styles.favoritesCount}>{favoritesCount}</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -58,5 +64,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+  },
+  favoriteContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  favoritesCount: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#fff',
+    textAlign: 'center',
+    minWidth: 16,
+  },
+  favoritesBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: '#008080',
+    borderRadius: 8,
+    paddingHorizontal: 3,
+    paddingVertical: 1,
+    minWidth: 16,
+    height: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#fff',
   },
 }); 

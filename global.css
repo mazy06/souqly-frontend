@@ -1,0 +1,19 @@
+/* Styles globaux pour le web */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow-x: hidden;
+}
+
+/* Forcer le scroll sur web */
+[data-testid="scroll-view"] {
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Styles pour le conteneur principal */
+#root {
+  height: 100vh;
+  overflow: hidden;
+} 

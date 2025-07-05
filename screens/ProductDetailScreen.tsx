@@ -18,11 +18,18 @@ export default function ProductDetailScreen() {
   const { productId } = route.params || {};
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favoritesCount, setFavoritesCount] = useState(0);
 
   useEffect(() => {
     if (!productId) return;
     ProductService.getProduct(productId).then(data => {
       setProduct(data);
+      setFavoritesCount(data.favoriteCount || 0);
+      setLoading(false);
+    }).catch(error => {
+      console.error('Erreur lors de la récupération du produit:', error);
+      setFavoritesCount(0); // Toujours initialiser à 0 en cas d'erreur
       setLoading(false);
     });
   }, [productId]);
@@ -72,6 +79,23 @@ export default function ProductDetailScreen() {
     // TODO: Navigate to buy screen
   };
 
+  const handleToggleFavorite = async () => {
+    try {
+      const result = await ProductService.toggleFavorite(product.id);
+      setIsFavorite(result.isFavorite);
+      setFavoritesCount(result.favoriteCount);
+    } catch (error) {
+      console.error('Erreur lors du toggle des favoris:', error);
+      // En cas d'erreur, on peut afficher un message à l'utilisateur
+      Alert.alert('Erreur', 'Impossible de modifier les favoris pour le moment');
+    }
+  };
+
+  const handleShare = () => {
+    // TODO: Implémenter le partage
+    console.log('Share pressed');
+  };
+
   // Mock data pour les produits similaires
   const similarProducts = [
     {
@@ -94,7 +118,13 @@ export default function ProductDetailScreen() {
     <View style={styles.container}>
       {/* Header normal */}
       <View style={styles.header}>
-        <ProductHeader title={product.title} />
+        <ProductHeader 
+          title={product.title} 
+          isFavorite={isFavorite} 
+          favoritesCount={favoritesCount}
+          onToggleFavorite={handleToggleFavorite}
+          onShare={handleShare}
+        />
       </View>
       
       <ScrollView 
