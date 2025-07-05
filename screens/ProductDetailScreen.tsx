@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, ScrollView, StyleSheet, ActivityIndicator, Platform, TouchableOpacity, Image, Alert, Text } from 'react-native';
+import { View, ScrollView, StyleSheet, ActivityIndicator, Platform, TouchableOpacity, Image, Alert, Text, Dimensions } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ProductService, { Product } from '../services/ProductService';
@@ -12,6 +12,8 @@ import ProductLocation from '../components/ProductLocation';
 import ProductReportLinks from '../components/ProductReportLinks';
 import { useAuth } from '../contexts/AuthContext';
 import { RouteProp } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../contexts/ThemeContext';
 
 type ProductDetailRouteProp = RouteProp<{ ProductDetail: { productId: string } }, 'ProductDetail'>;
 
@@ -26,6 +28,8 @@ export default function ProductDetailScreen() {
   const [favoritesCount, setFavoritesCount] = useState(0);
   const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
   const [similarProducts, setSimilarProducts] = useState<Product[]>([]);
+  const { colors } = useTheme();
+  const screenWidth = Dimensions.get('window').width;
 
   useEffect(() => {
     if (!productId) return;
@@ -82,6 +86,7 @@ export default function ProductDetailScreen() {
   const mainImageUrl = product.images && product.images.length > 0
     ? ProductService.getImageUrl(product.images[0].id)
     : null;
+  const totalImages = product.images ? product.images.length : 0;
 
   const handleProductPress = (productId: number) => {
     // @ts-ignore
@@ -191,12 +196,19 @@ export default function ProductDetailScreen() {
       >
         {/* Image principale cliquable */}
         {mainImageUrl && (
-          <TouchableOpacity onPress={handleImagePress} activeOpacity={0.8} style={styles.mainImageWrapper}>
+          <TouchableOpacity onPress={handleImagePress} activeOpacity={0.8} style={[styles.mainImageWrapper, { width: screenWidth, alignSelf: 'center' }]}>
             <Image
               source={{ uri: mainImageUrl }}
-              style={styles.mainImage}
+              style={[styles.mainImage, { width: screenWidth, height: screenWidth * 0.75 }]}
               resizeMode="cover"
             />
+            {/* Badge nombre de photos en bas à droite */}
+            {totalImages > 0 && (
+              <View style={[styles.photoBadgeBottomRight, { backgroundColor: colors.primary }]}>
+                <Ionicons name="images-outline" size={14} color="#fff" style={{ marginRight: 4 }} />
+                <Text style={styles.photoBadgeText}>{totalImages}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         )}
 
@@ -287,15 +299,11 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
   },
   mainImageWrapper: {
-    alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 24,
+    position: 'relative',
+    marginBottom: 16,
   },
   mainImage: {
-    width: '90%',
-    aspectRatio: 1,
-    borderRadius: 18,
-    backgroundColor: '#eee',
+    borderRadius: 0,
   },
   footerSticky: {
     position: 'absolute',
@@ -318,5 +326,21 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     minHeight: 80,
     paddingBottom: Platform.OS === 'ios' ? 34 : 12,
+  },
+  photoBadgeBottomRight: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    zIndex: 2,
+  },
+  photoBadgeText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 13,
   },
 }); 
