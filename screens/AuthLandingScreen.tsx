@@ -18,6 +18,11 @@ export default function AuthLandingScreen({ navigation }: { navigation: any }) {
   const [loading, setLoading] = useState(false);
   const { guest, signInWithApple, signInWithGoogle, signInWithFacebook } = useAuth();
 
+  const handleGuestMode = () => {
+    guest();
+    navigation.navigate('Main');
+  };
+
   const handleSocialAuth = async (provider: 'apple' | 'google' | 'facebook') => {
     setLoading(true);
     try {
@@ -34,7 +39,9 @@ export default function AuthLandingScreen({ navigation }: { navigation: any }) {
           break;
       }
       
-      if (!result.success) {
+      if (result.success) {
+        navigation.navigate('Main');
+      } else {
         Alert.alert('Erreur', result.error || 'Échec de l\'authentification');
       }
     } catch (error) {
@@ -51,7 +58,7 @@ export default function AuthLandingScreen({ navigation }: { navigation: any }) {
         <TouchableOpacity>
           <Text style={[styles.lang, { color: colors.text }]}>🌐 Français</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={guest}>
+        <TouchableOpacity onPress={handleGuestMode}>
           <Text style={[styles.skip, { color: '#888' }]}>Ignorer</Text>
         </TouchableOpacity>
       </View>

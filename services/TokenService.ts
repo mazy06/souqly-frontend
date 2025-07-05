@@ -106,11 +106,21 @@ class TokenService {
    */
   async isAuthenticated(): Promise<boolean> {
     try {
+      console.log('[TokenService] Vérification de l\'authentification...');
       const tokenData = await this.getTokenData();
-      if (!tokenData) return false;
+      console.log('[TokenService] TokenData récupéré:', tokenData ? 'OUI' : 'NON');
+      
+      if (!tokenData) {
+        console.log('[TokenService] Aucun token trouvé');
+        return false;
+      }
 
-      return !(await this.isTokenExpired());
+      const isExpired = await this.isTokenExpired();
+      console.log('[TokenService] Token expiré:', isExpired);
+      
+      return !isExpired;
     } catch (error) {
+      console.error('[TokenService] Erreur lors de la vérification:', error);
       return false;
     }
   }

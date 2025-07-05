@@ -21,6 +21,9 @@ export default function TabBarIcon({ route, color, focused }: TabBarIconProps) {
     case 'Rechercher':
       iconName = focused ? 'search' : 'search-outline';
       break;
+    case 'Favoris':
+      iconName = focused ? 'heart' : 'heart-outline';
+      break;
     case 'Vendre':
       iconName = focused ? 'add-circle' : 'add-circle-outline';
       break;

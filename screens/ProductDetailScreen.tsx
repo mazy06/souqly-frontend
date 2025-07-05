@@ -10,29 +10,63 @@ import ProductInfoSection from '../components/ProductInfoSection';
 import ProductSimilarCarousel from '../components/ProductSimilarCarousel';
 import ProductLocation from '../components/ProductLocation';
 import ProductReportLinks from '../components/ProductReportLinks';
+import { useAuth } from '../contexts/AuthContext';
+import { RouteProp } from '@react-navigation/native';
+
+type ProductDetailRouteProp = RouteProp<{ ProductDetail: { productId: string } }, 'ProductDetail'>;
 
 export default function ProductDetailScreen() {
-  const route = useRoute();
+  const route = useRoute<ProductDetailRouteProp>();
   const navigation = useNavigation();
-  // @ts-ignore
-  const { productId } = route.params || {};
+  const { isAuthenticated, isGuest } = useAuth();
+  const productId = route.params?.productId;
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoritesCount, setFavoritesCount] = useState(0);
+  const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
+  const [similarProducts, setSimilarProducts] = useState<Product[]>([]);
 
   useEffect(() => {
     if (!productId) return;
-    ProductService.getProduct(productId).then(data => {
-      setProduct(data);
-      setFavoritesCount(data.favoriteCount || 0);
-      setLoading(false);
-    }).catch(error => {
-      console.error('Erreur lors de la récupération du produit:', error);
-      setFavoritesCount(0); // Toujours initialiser à 0 en cas d'erreur
-      setLoading(false);
-    });
-  }, [productId]);
+    
+    const loadProductData = async () => {
+      try {
+        setLoading(true);
+        
+        // Charger le produit
+        const productData = await ProductService.getProduct(parseInt(productId));
+        setProduct(productData);
+        
+        // Charger les favoris seulement si l'utilisateur est connecté
+        if (isAuthenticated || isGuest) {
+          try {
+            const favoriteData = await ProductService.getFavoriteStatus(parseInt(productId));
+            setIsFavorite(favoriteData.isFavorite);
+            setFavoritesCount(favoriteData.favoriteCount);
+            console.log('[ProductDetailScreen] Données favoris chargées - isFavorite:', favoriteData.isFavorite, 'favoritesCount:', favoriteData.favoriteCount);
+          } catch (error) {
+            console.log('[ProductDetailScreen] Erreur lors du chargement des favoris (utilisateur non connecté ou erreur):', error);
+            // En cas d'erreur, on garde les valeurs par défaut
+            setIsFavorite(false);
+            setFavoritesCount(productData.favoriteCount || 0);
+          }
+        } else {
+          // Utilisateur non connecté, utiliser les données du produit
+          setIsFavorite(false);
+          setFavoritesCount(productData.favoriteCount || 0);
+        }
+        
+      } catch (error) {
+        console.error('Erreur lors du chargement des données du produit:', error);
+        // En cas d'erreur, on peut afficher un message à l'utilisateur
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadProductData();
+  }, [productId, isAuthenticated, isGuest]);
 
   if (loading) return <ActivityIndicator size="large" style={{ flex: 1 }} />;
   if (!product) return null;
@@ -81,13 +115,33 @@ export default function ProductDetailScreen() {
 
   const handleToggleFavorite = async () => {
     try {
+      console.log('[ProductDetailScreen] Toggle favorite pour produit:', product.id);
+      console.log('[ProductDetailScreen] État actuel - isFavorite:', isFavorite, 'favoritesCount:', favoritesCount);
+      
+      // Vérifier si l'utilisateur est connecté
+      if (!isAuthenticated && !isGuest) {
+        Alert.alert('Connexion requise', 'Vous devez être connecté pour ajouter des articles à vos favoris');
+        return;
+      }
+      
+      if (isTogglingFavorite) return;
+      setIsTogglingFavorite(true);
+      
       const result = await ProductService.toggleFavorite(product.id);
+      
+      console.log('[ProductDetailScreen] Réponse du backend:', result);
+      
+      // Mettre à jour l'état avec les nouvelles valeurs
       setIsFavorite(result.isFavorite);
       setFavoritesCount(result.favoriteCount);
+      
+      console.log('[ProductDetailScreen] Nouvel état - isFavorite:', result.isFavorite, 'favoritesCount:', result.favoriteCount);
     } catch (error) {
       console.error('Erreur lors du toggle des favoris:', error);
       // En cas d'erreur, on peut afficher un message à l'utilisateur
       Alert.alert('Erreur', 'Impossible de modifier les favoris pour le moment');
+    } finally {
+      setIsTogglingFavorite(false);
     }
   };
 
@@ -96,23 +150,22 @@ export default function ProductDetailScreen() {
     console.log('Share pressed');
   };
 
-  // Mock data pour les produits similaires
-  const similarProducts = [
-    {
-      id: 1,
-      title: 'Produit similaire 1',
-      price: 25.99,
-      imageUrl: 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f',
-      isFavorite: false,
-    },
-    {
-      id: 2,
-      title: 'Produit similaire 2',
-      price: 19.99,
-      imageUrl: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308',
-      isFavorite: true,
-    },
-  ];
+  const handleSimilarProductFavorite = async (productId: number) => {
+    try {
+      const result = await ProductService.toggleFavorite(productId);
+      // Mettre à jour l'état du produit similaire dans la liste
+      setSimilarProducts(prev => 
+        prev.map(product => 
+          product.id === productId 
+            ? { ...product, isFavorite: result.isFavorite }
+            : product
+        )
+      );
+    } catch (error) {
+      console.error('Erreur lors du toggle des favoris du produit similaire:', error);
+      Alert.alert('Erreur', 'Impossible de modifier les favoris pour le moment');
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -183,8 +236,17 @@ export default function ProductDetailScreen() {
 
         {/* Produits similaires */}
         <ProductSimilarCarousel
-          products={similarProducts}
+          products={similarProducts.map(product => ({
+            id: product.id,
+            title: product.title,
+            price: product.price,
+            imageUrl: product.images && product.images.length > 0 
+              ? ProductService.getImageUrl(product.images[0].id)
+              : 'https://via.placeholder.com/120',
+            isFavorite: false, // Par défaut, on ne peut pas savoir si c'est un favori sans être connecté
+          }))}
           onProductPress={handleProductPress}
+          onFavoritePress={handleSimilarProductFavorite}
         />
 
         {/* Liens de signalement et aide */}

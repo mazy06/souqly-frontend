@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { View, ScrollView, RefreshControl, ActivityIndicator, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, ScrollView, RefreshControl, ActivityIndicator, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import ProductCard from '../components/ProductCard';
 import ProductService, { Product } from '../services/ProductService';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useFavorites } from '../hooks/useFavorites';
 
 // Types pour la navigation
 export type HomeStackParamList = {
@@ -16,6 +18,8 @@ export default function HomeScreen() {
   console.log('[HomeScreen] Composant monté');
   const navigation = useNavigation<StackNavigationProp<HomeStackParamList>>();
   const { colors } = useTheme();
+  const { isAuthenticated, isGuest } = useAuth();
+  const { isFavorite, toggleFavorite, refreshFavorites } = useFavorites();
   
   const [products, setProducts] = useState<Product[]>([]);
   const [imageUrls, setImageUrls] = useState<{[key: number]: string}>({});
@@ -125,6 +129,23 @@ export default function HomeScreen() {
     navigation.navigate('ProductDetail', { productId: productId.toString() });
   };
 
+  const handleFavoritePress = async (productId: number) => {
+    try {
+      const result = await toggleFavorite(productId);
+      // Mettre à jour l'état du produit dans la liste
+      setProducts(prev => 
+        prev.map(product => 
+          product.id === productId 
+            ? { ...product, favoriteCount: result.favoriteCount }
+            : product
+        )
+      );
+    } catch (error) {
+      console.error('Erreur lors du toggle des favoris:', error);
+      Alert.alert('Erreur', 'Impossible de modifier les favoris pour le moment');
+    }
+  };
+
   const renderProduct = ({ item }: { item: Product }) => (
     <ProductCard
       title={item.title}
@@ -135,7 +156,9 @@ export default function HomeScreen() {
       priceWithFees={item.priceWithFees?.toString()}
       image={imageUrls[item.id] || 'https://via.placeholder.com/120'}
       likes={item.favoriteCount}
+      isFavorite={isFavorite(item.id)}
       onPress={() => handleProductPress(item.id)}
+      onFavoritePress={() => handleFavoritePress(item.id)}
     />
   );
 
@@ -160,6 +183,13 @@ export default function HomeScreen() {
         Soyez le premier à publier un article !
       </Text>
     </View>
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      loadProducts(0, false);
+      refreshFavorites();
+    }, [])
   );
 
   if (loading) {

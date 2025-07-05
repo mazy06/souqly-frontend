@@ -143,7 +143,15 @@ class ProductService {
 
   // Récupérer les produits favoris de l'utilisateur
   async getFavorites(): Promise<Product[]> {
-    return ApiService.get(`${this.baseUrl}/favorites`, true);
+    console.log('[ProductService] Appel de getFavorites()');
+    try {
+      const result = await ApiService.get<Product[]>(`${this.baseUrl}/favorites`, true);
+      console.log('[ProductService] Favoris récupérés avec succès:', result);
+      return result;
+    } catch (error) {
+      console.error('[ProductService] Erreur lors de la récupération des favoris:', error);
+      throw error;
+    }
   }
 
   // Récupérer les produits de l'utilisateur connecté
@@ -180,6 +188,11 @@ class ProductService {
     }
     
     return null;
+  }
+
+  // Récupérer l'état favori et le compteur pour un produit
+  async getFavoriteStatus(productId: number): Promise<{ isFavorite: boolean; favoriteCount: number }> {
+    return ApiService.get(`${this.baseUrl}/${productId}/favorite`, true);
   }
 }
 

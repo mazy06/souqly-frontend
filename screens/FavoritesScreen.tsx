@@ -1,122 +1,154 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, FlatList, Text, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import ProductCard from '../components/ProductCard';
-import Skeleton from '../components/Skeleton';
-import Colors from '../constants/Colors';
-import { useColorScheme } from 'react-native';
+import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
+import ProductService, { Product } from '../services/ProductService';
+import { useFavorites } from '../hooks/useFavorites';
 
-interface FavoriteProduct {
-  id: number;
-  title: string;
-  brand: string;
-  size: string;
-  condition: string;
-  price: string;
-  priceWithFees: string;
-  image: string;
-  isFavorite: boolean;
-}
+// Types pour la navigation
+export type FavoritesStackParamList = {
+  FavoritesMain: undefined;
+  ProductDetail: { productId: string };
+};
 
-export default function FavoritesScreen({ navigation }: { navigation: any }) {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+export default function FavoritesScreen() {
+  const navigation = useNavigation<StackNavigationProp<FavoritesStackParamList>>();
+  const { isAuthenticated, isGuest } = useAuth();
+  const { colors } = useTheme();
+  const { isFavorite, toggleFavorite, refreshFavorites } = useFavorites();
+  
+  const [favorites, setFavorites] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [favorites, setFavorites] = useState<FavoriteProduct[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [imageUrls, setImageUrls] = useState<{[key: number]: string}>({});
 
-  // Mock data for favorites - in a real app this would come from a context or API
-  const mockFavorites: FavoriteProduct[] = [
-    {
-      id: 1,
-      title: "Top fleuri rouge",
-      brand: "Bershka",
-      size: "S / 36 / 8",
-      condition: "Très bon état",
-      price: "9,90",
-      priceWithFees: "11,10",
-      image: "https://images.unsplash.com/photo-1512436991641-6745cdb1723f",
-      isFavorite: true
-    },
-    {
-      id: 4,
-      title: "Robe soirée violette",
-      brand: "Pro",
-      size: "L / 40 / 12",
-      condition: "Comme neuf",
-      price: "19,00",
-      priceWithFees: "21,50",
-      image: "https://images.unsplash.com/photo-1465101046530-73398c7f28ca",
-      isFavorite: true
-    },
-    {
-      id: 7,
-      title: "Casque Bluetooth JBL",
-      brand: "JBL",
-      size: "One Size",
-      condition: "Très bon état",
-      price: "60,00",
-      priceWithFees: "65,00",
-      image: "https://images.unsplash.com/photo-1519125323398-675f0ddb6308",
-      isFavorite: true
-    },
-  ];
-
-  useEffect(() => {
-    // Simulate loading favorites from storage/API
-    const timer = setTimeout(() => {
-      setFavorites(mockFavorites);
+  const loadFavorites = async () => {
+    try {
+      setLoading(true);
+      console.log('[FavoritesScreen] Début du chargement des favoris');
+      console.log('[FavoritesScreen] isAuthenticated:', isAuthenticated);
+      console.log('[FavoritesScreen] isGuest:', isGuest);
+      
+      const favoritesList = await ProductService.getFavorites();
+      console.log('[FavoritesScreen] Favoris récupérés:', favoritesList.length);
+      console.log('[FavoritesScreen] Détails des favoris:', favoritesList);
+      
+      setFavorites(favoritesList);
+      
+      // Charger les URLs des images pour chaque produit
+      const urls: {[key: number]: string} = {};
+      for (const product of favoritesList) {
+        try {
+          const imageUrl = await ProductService.getProductImageUrl(product);
+          if (imageUrl) {
+            urls[product.id] = imageUrl;
+          }
+        } catch (error) {
+          // Erreur silencieuse pour le chargement d'image
+        }
+      }
+      setImageUrls(urls);
+    } catch (error) {
+      console.error('[FavoritesScreen] Erreur lors du chargement des favoris:', error);
+    } finally {
       setLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const removeFromFavorites = (productId: number) => {
-    setFavorites(prev => prev.filter(item => item.id !== productId));
+    }
   };
 
-  if (loading) {
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadFavorites();
+    setRefreshing(false);
+  };
+
+  useEffect(() => {
+    if (isAuthenticated || isGuest) {
+      loadFavorites();
+    }
+  }, [isAuthenticated, isGuest]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadFavorites();
+      refreshFavorites();
+    }, [])
+  );
+
+  const handleProductPress = (productId: number) => {
+    navigation.navigate('ProductDetail', { productId: productId.toString() });
+  };
+
+  const handleFavoritePress = async (productId: number) => {
+    try {
+      const result = await ProductService.toggleFavorite(productId);
+      // Retirer le produit de la liste des favoris
+      setFavorites(prev => prev.filter(product => product.id !== productId));
+    } catch (error) {
+      console.error('[FavoritesScreen] Erreur lors du toggle des favoris:', error);
+    }
+  };
+
+  const renderProduct = ({ item }: { item: Product }) => (
+    <ProductCard
+      title={item.title}
+      brand={item.brand}
+      size={item.size}
+      condition={item.condition}
+      price={item.price.toString()}
+      priceWithFees={item.priceWithFees?.toString()}
+      image={imageUrls[item.id] || 'https://via.placeholder.com/120'}
+      onPress={() => handleProductPress(item.id)}
+      likes={item.favoriteCount}
+      isFavorite={true}
+      onFavoritePress={() => handleFavoritePress(item.id)}
+    />
+  );
+
+  // Si l'utilisateur n'est pas connecté, afficher un message d'authentification
+  if (!isAuthenticated && !isGuest) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Mes Favoris</Text>
-          <Text style={[styles.subtitle, { color: colors.text, opacity: 0.7 }]}>Chargement...</Text>
-        </View>
-        <View style={styles.skeletonContainer}>
-          <View style={styles.skeletonGrid}>
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <View key={i} style={styles.skeletonCard}>
-                <View style={styles.skeletonImageContainer}>
-                  <Skeleton width="100%" height={160} borderRadius={16} />
-                </View>
-                <View style={styles.skeletonContent}>
-                  <Skeleton width="70%" height={14} />
-                  <Skeleton width="90%" height={16} />
-                  <Skeleton width="60%" height={12} />
-                  <Skeleton width="50%" height={14} />
-                </View>
-              </View>
-            ))}
-          </View>
+        <View style={styles.authContainer}>
+          <Ionicons name="heart-outline" size={80} color={colors.primary} style={styles.authIcon} />
+          <Text style={[styles.authTitle, { color: colors.text }]}>
+            Vos favoris
+          </Text>
+          <Text style={[styles.authSubtitle, { color: colors.text }]}>
+            Connectez-vous pour voir et gérer vos articles favoris
+          </Text>
+          
+          <TouchableOpacity
+            style={[styles.authButton, { backgroundColor: colors.primary }]}
+            onPress={() => (navigation as any).navigate('Auth')}
+          >
+            <Text style={styles.authButtonText}>Se connecter</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.authButtonOutline, { borderColor: colors.primary }]}
+            onPress={() => (navigation as any).navigate('Login')}
+          >
+            <Text style={[styles.authButtonTextOutline, { color: colors.primary }]}>
+              J'ai déjà un compte
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
   }
 
-  if (favorites.length === 0) {
+  if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.emptyContainer}>
-          <Ionicons name="heart-outline" size={80} color="#e74c3c" style={styles.emptyIcon} />
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>Aucun favori</Text>
-          <Text style={[styles.emptySubtitle, { color: colors.text, opacity: 0.7 }]}>
-            Vous n'avez pas encore ajouté d'articles à vos favoris
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.text }]}>
+            Chargement de vos favoris...
           </Text>
-          <TouchableOpacity 
-            style={[styles.browseButton, { backgroundColor: colors.button }]}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.browseButtonText}>Parcourir les articles</Text>
-          </TouchableOpacity>
         </View>
       </View>
     );
@@ -126,32 +158,31 @@ export default function FavoritesScreen({ navigation }: { navigation: any }) {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>Mes Favoris</Text>
-        <Text style={[styles.subtitle, { color: colors.text, opacity: 0.7 }]}>
-          {favorites.length} article{favorites.length > 1 ? 's' : ''}
+        <Text style={[styles.subtitle, { color: colors.text + '80' }]}>
+          {favorites.length} article{favorites.length !== 1 ? 's' : ''}
         </Text>
       </View>
-      
+
       <FlatList
         data={favorites}
         keyExtractor={item => item.id.toString()}
         numColumns={2}
         contentContainerStyle={styles.gridContent}
-        renderItem={({ item, index }) => (
-          <ProductCard
-            title={item.title}
-            brand={item.brand}
-            size={item.size}
-            condition={item.condition}
-            price={item.price}
-            priceWithFees={item.priceWithFees}
-            image={item.image}
-            onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
-            likes={index % 3 === 0 ? 13 : index % 3 === 1 ? 7 : 0}
-            isPro={index % 4 === 0}
-            isFavorite={true}
-            onFavoritePress={() => removeFromFavorites(item.id)}
-          />
-        )}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        renderItem={renderProduct}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Ionicons name="heart-outline" size={64} color={colors.tabIconDefault} />
+            <Text style={[styles.emptyText, { color: colors.text }]}>
+              Aucun favori pour le moment
+            </Text>
+            <Text style={[styles.emptySubtext, { color: colors.tabIconDefault }]}>
+              Ajoutez des articles à vos favoris pour les retrouver ici
+            </Text>
+          </View>
+        }
         showsVerticalScrollIndicator={false}
       />
     </View>
@@ -162,16 +193,69 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
+  authContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  authIcon: {
+    marginBottom: 20,
+  },
+  authTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  authSubtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 24,
+  },
+  authButton: {
+    width: '100%',
     padding: 16,
-    paddingTop: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  authButtonOutline: {
+    width: '100%',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  authButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  authButtonTextOutline: {
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  header: {
+    padding: 20,
+    paddingTop: 60,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   subtitle: {
+    fontSize: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
     fontSize: 16,
   },
   gridContent: {
@@ -182,52 +266,19 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: 40,
+    paddingVertical: 60,
   },
-  emptyIcon: {
-    marginBottom: 24,
-  },
-  emptyTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 32,
-    lineHeight: 24,
-  },
-  browseButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  browseButtonText: {
-    color: '#fff',
-    fontSize: 16,
+  emptyText: {
+    fontSize: 18,
     fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 8,
   },
-  skeletonContainer: {
-    padding: 8,
-  },
-  skeletonGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  skeletonCard: {
-    width: '50%',
-    padding: 8,
-  },
-  skeletonImageContainer: {
-    width: '100%',
-    height: 160,
-    borderRadius: 16,
-    overflow: 'hidden',
-    backgroundColor: '#f0f0f0',
-  },
-  skeletonContent: {
-    padding: 8,
+  emptySubtext: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 }); 

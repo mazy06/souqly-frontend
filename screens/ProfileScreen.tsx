@@ -26,7 +26,7 @@ export default function ProfileScreen() {
     console.log('→ [ProfileScreen] logout terminé, navigation vers AuthLanding');
     navigation.reset({
       index: 0,
-      routes: [{ name: 'AuthLanding' as any }],
+      routes: [{ name: 'Auth' as any }],
     });
   };
 
@@ -62,7 +62,7 @@ export default function ProfileScreen() {
         <Text style={[styles.title, { color: colors.text }]}>Profil non disponible</Text>
         <TouchableOpacity
           style={[styles.button, { backgroundColor: colors.primary }]}
-          onPress={() => navigation.navigate('AuthLanding' as any)}
+          onPress={() => navigation.navigate('Auth')}
         >
           <Text style={styles.buttonText}>Se connecter</Text>
         </TouchableOpacity>

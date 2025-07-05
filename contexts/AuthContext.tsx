@@ -34,14 +34,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkAuthStatus = async () => {
     try {
       setIsLoading(true);
+      console.log('[AuthContext] Vérification du statut d\'authentification...');
       
       // Vérifier si l'utilisateur a des tokens valides
       const isAuth = await TokenService.isAuthenticated();
+      console.log('[AuthContext] isAuthenticated:', isAuth);
       
       if (isAuth) {
         try {
+          console.log('[AuthContext] Tokens valides trouvés, récupération des infos utilisateur...');
           // Récupérer les informations complètes de l'utilisateur via l'API
           const userInfo = await ApiService.getCurrentUser() as any;
+          console.log('[AuthContext] Informations utilisateur récupérées:', userInfo);
           
           if (userInfo) {
             setUser({
@@ -53,7 +57,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             });
             setIsAuthenticated(true);
             setIsGuest(false);
+            console.log('[AuthContext] Utilisateur connecté avec succès');
           } else {
+            console.log('[AuthContext] Aucune information utilisateur retournée, déconnexion...');
             // Si l'API ne retourne pas d'utilisateur, supprimer les tokens
             await TokenService.clearTokens();
             setIsAuthenticated(false);
@@ -61,17 +67,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(null);
           }
         } catch (error) {
+          console.error('[AuthContext] Erreur lors de la récupération des infos utilisateur:', error);
           // Erreur silencieuse lors de la récupération des infos utilisateur
           setUser(null);
           setIsAuthenticated(false);
         }
       } else {
+        console.log('[AuthContext] Aucun token valide trouvé');
         // Pas de tokens valides
         setIsAuthenticated(false);
         setIsGuest(false);
         setUser(null);
       }
     } catch (error) {
+      console.error('[AuthContext] Erreur lors de la vérification du statut:', error);
       // En cas d'erreur, on considère que l'utilisateur n'est pas connecté
       await TokenService.clearTokens();
       setIsAuthenticated(false);
@@ -79,6 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
     } finally {
       setIsLoading(false);
+      console.log('[AuthContext] Vérification terminée');
     }
   };
 

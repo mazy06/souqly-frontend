@@ -44,27 +44,21 @@ export default function ProductCard({
             <Text style={styles.proText}>Pro</Text>
           </View>
         )}
-        {likes > 0 && (
-          <View style={styles.likesBadge}>
-            <Ionicons name="heart-outline" size={16} color="#fff" />
-            <Text style={styles.likesText}>{likes}</Text>
-          </View>
-        )}
-        {onFavoritePress && (
-          <TouchableOpacity 
-            style={styles.favoriteButton} 
-            onPress={(e) => {
-              e.stopPropagation();
-              onFavoritePress();
-            }}
-          >
-            <Ionicons 
-              name={isFavorite ? "heart" : "heart-outline"} 
-              size={20} 
-              color={isFavorite ? colors.danger : "#fff"} 
-            />
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity 
+          style={styles.likesBadgeTopRight}
+          onPress={(e) => {
+            e.stopPropagation();
+            if (onFavoritePress) onFavoritePress();
+          }}
+          activeOpacity={0.7}
+        >
+          <Ionicons 
+            name={isFavorite ? 'heart' : 'heart-outline'} 
+            size={16} 
+            color={isFavorite ? colors.danger : '#fff'} 
+          />
+          <Text style={styles.likesText}>{likes}</Text>
+        </TouchableOpacity>
       </View>
       {brand && <Text style={[styles.brand, { color: colors.text }]} numberOfLines={1}>{brand}</Text>}
       <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>{title}</Text>
@@ -117,9 +111,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 12,
   },
-  likesBadge: {
+  likesBadgeTopRight: {
     position: 'absolute',
-    bottom: 8,
+    top: 8,
     right: 8,
     backgroundColor: 'rgba(0,0,0,0.6)',
     borderRadius: 16,
@@ -127,23 +121,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 8,
     paddingVertical: 2,
+    zIndex: 2,
   },
   likesText: {
     color: '#fff',
     fontWeight: 'bold',
     marginLeft: 4,
     fontSize: 13,
-  },
-  favoriteButton: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    borderRadius: 20,
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   brand: {
     fontWeight: '500',

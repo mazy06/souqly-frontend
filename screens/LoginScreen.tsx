@@ -30,7 +30,9 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
         result = await signUpWithEmail(email, password, name);
       }
       
-      if (!result.success) {
+      if (result.success) {
+        navigation.navigate('Main');
+      } else {
         Alert.alert('Erreur', result.error || 'Échec de l\'authentification');
       }
     } catch (error) {
