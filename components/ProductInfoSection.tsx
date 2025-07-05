@@ -1,0 +1,157 @@
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+
+interface ProductInfoSectionProps {
+  price: number;
+  priceWithFees?: number;
+  description: string;
+  condition: string;
+  brand?: string;
+  size?: string;
+  shippingInfo?: string;
+}
+
+export default function ProductInfoSection({
+  price,
+  priceWithFees,
+  description,
+  condition,
+  brand,
+  size,
+  shippingInfo,
+}: ProductInfoSectionProps) {
+  const [showFullDescription, setShowFullDescription] = useState(false);
+
+  return (
+    <View style={styles.container}>
+      {/* Prix */}
+      <View style={styles.priceSection}>
+        <Text style={styles.price}>{price.toFixed(2)} €</Text>
+        {priceWithFees && (
+          <View style={styles.priceProtectionRow}>
+            <Text style={styles.priceWithProtection}>
+              {priceWithFees.toFixed(2)} € Inclut la Protection acheteurs
+            </Text>
+            <Ionicons name="shield-checkmark" size={16} color="#00BFA6" style={styles.shieldIcon} />
+          </View>
+        )}
+      </View>
+
+      {/* Métadonnées */}
+      <View style={styles.metadataRow}>
+        <Text style={styles.metadata}>
+          {size || 'Taille non spécifiée'} • {condition}
+          {brand && <Text style={styles.brand}> • {brand}</Text>}
+        </Text>
+      </View>
+
+      {/* Livraison */}
+      {shippingInfo && (
+        <View style={styles.shippingBadge}>
+          <Ionicons name="car-outline" size={16} color="#fff" style={styles.carIcon} />
+          <Text style={styles.shippingText}>
+            Frais de port : {shippingInfo}
+          </Text>
+        </View>
+      )}
+
+      {/* Description */}
+      <View style={styles.descriptionSection}>
+        <Text style={styles.descriptionTitle}>Description</Text>
+        <Text style={styles.descriptionText} numberOfLines={showFullDescription ? undefined : 3}>
+          {description}
+        </Text>
+        {description.length > 100 && (
+          <TouchableOpacity 
+            onPress={() => setShowFullDescription(!showFullDescription)}
+            style={styles.showMoreButton}
+          >
+            <Text style={styles.showMoreText}>
+              {showFullDescription ? 'Voir moins' : 'Voir plus'}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+  },
+  priceSection: {
+    marginBottom: 12,
+  },
+  price: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#000',
+    marginBottom: 4,
+  },
+  priceProtectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  priceWithProtection: {
+    fontSize: 14,
+    color: '#666',
+  },
+  shieldIcon: {
+    marginLeft: 4,
+  },
+  metadataRow: {
+    marginBottom: 12,
+  },
+  metadata: {
+    fontSize: 16,
+    color: '#666',
+  },
+  brand: {
+    fontWeight: '600',
+    color: '#008080',
+  },
+  shippingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#008080',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    alignSelf: 'flex-start',
+    marginBottom: 20,
+  },
+  carIcon: {
+    marginRight: 4,
+  },
+  shippingText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  descriptionSection: {
+    marginTop: 8,
+  },
+  descriptionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000',
+    marginBottom: 8,
+  },
+  descriptionText: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#333',
+  },
+  showMoreButton: {
+    marginTop: 8,
+  },
+  showMoreText: {
+    color: '#008080',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+}); 
