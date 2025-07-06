@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import ThemeToggle from '../components/ThemeToggle';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Définition du type du stack profil
 export type ProfileStackParamList = {
@@ -15,7 +16,7 @@ export type ProfileStackParamList = {
 };
 
 export default function ProfileScreen() {
-  const navigation = useNavigation<StackNavigationProp<ProfileStackParamList>>();
+  const navigation = useNavigation<any>();
   const { user, logout } = useAuth(); // user: AuthUser | null
   const { colors, themeMode, isDark } = useTheme();
   const [themeModalVisible, setThemeModalVisible] = useState(false);
@@ -23,11 +24,8 @@ export default function ProfileScreen() {
   const handleLogout = async () => {
     console.log('→ [ProfileScreen] handleLogout appelé');
     await logout();
-    console.log('→ [ProfileScreen] logout terminé, navigation vers AuthLanding');
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'Auth' as any }],
-    });
+    console.log('→ [ProfileScreen] logout terminé');
+    // Rien à faire ici, le contexte d'authentification pilote la navigation
   };
 
   const getThemeIcon = () => {
@@ -58,20 +56,20 @@ export default function ProfileScreen() {
 
   if (!user) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <Text style={[styles.title, { color: colors.text }]}>Profil non disponible</Text>
         <TouchableOpacity
           style={[styles.button, { backgroundColor: colors.primary }]}
-          onPress={() => navigation.navigate('Auth')}
+          onPress={logout}
         >
           <Text style={styles.buttonText}>Se connecter</Text>
         </TouchableOpacity>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.header}>
           <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
@@ -158,7 +156,7 @@ export default function ProfileScreen() {
         visible={themeModalVisible} 
         onClose={() => setThemeModalVisible(false)} 
       />
-    </>
+    </SafeAreaView>
   );
 }
 

@@ -6,6 +6,7 @@ import SearchBar from '../components/SearchBar';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import CategoryService, { Category } from '../services/CategoryService';
 import { useTheme } from '../contexts/ThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Types pour la navigation
 export type SearchStackParamList = {
@@ -50,6 +51,7 @@ export default function SearchScreen() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation<StackNavigationProp<SearchStackParamList>>();
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     loadCategories();
@@ -81,7 +83,7 @@ export default function SearchScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}> 
+    <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}> 
       <View style={styles.header}>
         <SearchBar value={search} onChangeText={setSearch} placeholder="Rechercher un article ou un membre" />
       </View>

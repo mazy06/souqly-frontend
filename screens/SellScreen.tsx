@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -9,7 +9,9 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Animated
+  Animated,
+  FlatList,
+  Modal
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ProductImagePicker from '../components/ProductImagePicker';
@@ -19,6 +21,15 @@ import ProductService from '../services/ProductService';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { getImageUrl, getUploadUrl } from '../constants/Config';
+import { Picker } from '@react-native-picker/picker';
+// @ts-ignore
+import citiesRaw from '../assets/cities.json';
+import countries from 'i18n-iso-countries';
+import ModalSelector from '../components/ModalSelector';
+import CategoryService, { Category } from '../services/CategoryService';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+countries.registerLocale(require('i18n-iso-countries/langs/fr.json'));
+const cities: { name: string; country: string }[] = citiesRaw as any;
 
 interface ProductForm {
   title: string;
@@ -29,6 +40,8 @@ interface ProductForm {
   condition: string;
   price: string;
   imageIds: number[];
+  city?: string;
+  country?: string;
 }
 
 const CONDITIONS = [
@@ -53,9 +66,18 @@ const SIZES = [
   'Unique'
 ];
 
+// Liste des pays à partir du fichier cities.json (unique country code et nom)
+const countryList = Array.from(new Set(cities.map((c: any) => c.country)))
+  .map((code: string) => {
+    const name = countries.getName(code, 'fr') || code;
+    return { code, name };
+  })
+  .sort((a, b) => a.name.localeCompare(b.name));
+
 export default function SellScreen() {
   const { colors } = useTheme();
   const { isAuthenticated, user } = useAuth();
+  const insets = useSafeAreaInsets();
   
   const [formData, setFormData] = useState<ProductForm>({
     title: '',
@@ -65,11 +87,36 @@ export default function SellScreen() {
     size: '',
     condition: '',
     price: '',
-    imageIds: []
+    imageIds: [],
+    city: '',
+    country: '',
   });
 
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState<string>('');
+  const [selectedCity, setSelectedCity] = useState<string>('');
+  const [cityQuery, setCityQuery] = useState('');
+  const [filteredCities, setFilteredCities] = useState<string[]>([]);
+  const [showCitySuggestions, setShowCitySuggestions] = useState(false);
+  const [showCountryModal, setShowCountryModal] = useState(false);
+  const [showCityModal, setShowCityModal] = useState(false);
+  const [countrySearch, setCountrySearch] = useState('');
+  const [citySearch, setCitySearch] = useState('');
+  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+
+  // Charger les catégories au montage
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const cats = await CategoryService.getAllCategories();
+        setCategoryOptions(cats.map(cat => `${cat.id} - ${cat.label}`));
+      } catch (e) {
+        setCategoryOptions([]);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const handleSubmit = async () => {
     
@@ -122,7 +169,9 @@ export default function SellScreen() {
         size: formData.size || undefined,
         condition: formData.condition,
         categoryId: categoryId,
-        imageIds: formData.imageIds
+        imageIds: formData.imageIds,
+        city: formData.city,
+        country: formData.country,
       };
       
       const result = await ProductService.createProduct(productData);
@@ -140,7 +189,9 @@ export default function SellScreen() {
         size: '',
         condition: '',
         price: '',
-        imageIds: []
+        imageIds: [],
+        city: '',
+        country: '',
       });
 
       // Masquer le message après 3 secondes
@@ -162,9 +213,29 @@ export default function SellScreen() {
     return getImageUrl(id);
   }, []);
 
+  // Met à jour la liste des villes selon le pays sélectionné
+  const handleCountryChange = (countryCode: string) => {
+    setSelectedCountry(countryCode);
+    setSelectedCity('');
+    setFormData(prev => ({ ...prev, country: countryCode, city: '' }));
+    setCityQuery('');
+    if (countryCode) {
+      const citiesForCountry = cities.filter((c: any) => c.country === countryCode).map((c: any) => c.name);
+      setFilteredCities(citiesForCountry);
+    } else {
+      setFilteredCities([]);
+    }
+  };
+
+  const handleCityChange = (cityName: string) => {
+    setSelectedCity(cityName);
+    setFormData(prev => ({ ...prev, city: cityName }));
+    setCityQuery(cityName);
+  };
+
   return (
     <KeyboardAvoidingView 
-      style={[styles.container, { backgroundColor: colors.background }]}
+      style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       {/* Message de succès */}
@@ -197,11 +268,7 @@ export default function SellScreen() {
         <View style={styles.inputGroup}>
           <Text style={[styles.inputLabel, { color: colors.text }]}>Titre *</Text>
           <TextInput
-            style={[styles.textInput, { 
-              backgroundColor: colors.card,
-              color: colors.text,
-              borderColor: colors.border
-            }]}
+            style={[styles.textInput, { backgroundColor: '#fff', color: colors.text, borderColor: colors.border }]}
             value={formData.title}
             onChangeText={(text) => updateFormData('title', text)}
             placeholder="Ex: Robe d'été fleurie"
@@ -217,11 +284,7 @@ export default function SellScreen() {
         <View style={styles.inputGroup}>
           <Text style={[styles.inputLabel, { color: colors.text }]}>Description</Text>
           <TextInput
-            style={[styles.textArea, { 
-              backgroundColor: colors.card,
-              color: colors.text,
-              borderColor: colors.border
-            }]}
+            style={[styles.textArea, { backgroundColor: '#fff', color: colors.text, borderColor: colors.border }]}
             value={formData.description}
             onChangeText={(text) => updateFormData('description', text)}
             placeholder="Décris ton article en détail..."
@@ -236,21 +299,22 @@ export default function SellScreen() {
         </View>
 
         {/* Catégorie */}
-        <CategoryPicker
-          value={formData.category}
-          onValueChange={(value) => updateFormData('category', value)}
+        <ModalSelector
           label="Catégorie"
+          data={categoryOptions}
+          selectedValue={categoryOptions.find(opt => opt.startsWith(formData.category + ' - ')) || ''}
+          onSelect={(value) => {
+            const id = value.split(' - ')[0];
+            updateFormData('category', id);
+          }}
+          placeholder="Sélectionner une catégorie"
         />
 
         {/* Marque */}
         <View style={styles.inputGroup}>
           <Text style={[styles.inputLabel, { color: colors.text }]}>Marque</Text>
           <TextInput
-            style={[styles.textInput, { 
-              backgroundColor: colors.card,
-              color: colors.text,
-              borderColor: colors.border
-            }]}
+            style={[styles.textInput, { backgroundColor: '#fff', color: colors.text, borderColor: colors.border }]}
             value={formData.brand}
             onChangeText={(text) => updateFormData('brand', text)}
             placeholder="Ex: Zara, H&M, Nike..."
@@ -259,44 +323,57 @@ export default function SellScreen() {
         </View>
 
         {/* Taille */}
-        <SimplePicker
-          value={formData.size}
-          onValueChange={(value) => updateFormData('size', value)}
-          options={SIZES}
+        <ModalSelector
           label="Taille"
+          data={SIZES}
+          selectedValue={formData.size}
+          onSelect={(value) => updateFormData('size', value)}
           placeholder="Sélectionner une taille"
-          title="Sélectionner une taille"
         />
 
         {/* État */}
-        <SimplePicker
-          value={formData.condition}
-          onValueChange={(value) => updateFormData('condition', value)}
-          options={CONDITIONS}
+        <ModalSelector
           label="État"
+          data={CONDITIONS}
+          selectedValue={formData.condition}
+          onSelect={(value) => updateFormData('condition', value)}
           placeholder="Sélectionner un état"
-          title="Sélectionner un état"
         />
 
         {/* Prix */}
         <View style={styles.inputGroup}>
           <Text style={[styles.inputLabel, { color: colors.text }]}>Prix *</Text>
-          <View style={styles.priceContainer}>
-            <TextInput
-              style={[styles.priceInput, { 
-                backgroundColor: colors.card,
-                color: colors.text,
-                borderColor: colors.border
-              }]}
-              value={formData.price}
-              onChangeText={(text) => updateFormData('price', text.replace(/[^0-9,]/g, ''))}
-              placeholder="0,00"
-              placeholderTextColor={colors.tabIconDefault}
-              keyboardType="numeric"
-            />
-            <Text style={[styles.currency, { color: colors.text }]}>€</Text>
-          </View>
+          <TextInput
+            style={[styles.textInput, { backgroundColor: '#fff', color: colors.text, borderColor: colors.border }]}
+            value={formData.price}
+            onChangeText={(text) => updateFormData('price', text.replace(/[^0-9,]/g, ''))}
+            placeholder="0,00 €"
+            placeholderTextColor={colors.tabIconDefault}
+            keyboardType="numeric"
+          />
         </View>
+
+        {/* Pays */}
+        <ModalSelector
+          label="Pays *"
+          data={countryList.map(c => c.name)}
+          selectedValue={selectedCountry ? (countryList.find(c => c.code === selectedCountry)?.name || '') : ''}
+          onSelect={(name) => {
+            const country = countryList.find(c => c.name === name);
+            if (country) handleCountryChange(country.code);
+          }}
+          placeholder="Sélectionner un pays"
+        />
+
+        {/* Ville */}
+        <ModalSelector
+          label="Ville *"
+          data={filteredCities}
+          selectedValue={selectedCity}
+          onSelect={handleCityChange}
+          placeholder="Sélectionner une ville"
+          disabled={!selectedCountry}
+        />
 
         {/* Bouton de soumission */}
         <TouchableOpacity 

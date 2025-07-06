@@ -7,6 +7,11 @@ import ProductService, { Product } from '../services/ProductService';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useFavorites } from '../hooks/useFavorites';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import SearchBar from '../components/SearchBar';
+import FilterChips from '../components/FilterChips';
+import VisitorBadge from '../components/VisitorBadge';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Types pour la navigation
 export type HomeStackParamList = {
@@ -20,6 +25,7 @@ export default function HomeScreen() {
   const { colors } = useTheme();
   const { isAuthenticated, isGuest } = useAuth();
   const { isFavorite, toggleFavorite, refreshFavorites } = useFavorites();
+  const insets = useSafeAreaInsets();
   
   const [products, setProducts] = useState<Product[]>([]);
   const [imageUrls, setImageUrls] = useState<{[key: number]: string}>({});
@@ -30,6 +36,8 @@ export default function HomeScreen() {
   const [currentPage, setCurrentPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [totalPages, setTotalPages] = useState(0);
+  const [search, setSearch] = useState('');
+  const [selectedFilter, setSelectedFilter] = useState('Voir tout');
 
   const loadProducts = async (page: number = 0, append: boolean = false) => {
     console.log(`[HomeScreen] loadProducts appelé avec page=${page}, append=${append}`);
@@ -213,30 +221,37 @@ export default function HomeScreen() {
   }
 
   return (
-    <FlatList
-      data={products}
-      renderItem={renderProduct}
-      keyExtractor={(item) => item.id.toString()}
-      numColumns={2}
-      columnWrapperStyle={styles.productRow}
-      contentContainerStyle={[styles.scrollContent, { backgroundColor: colors.background }]}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-      onEndReached={loadMoreProducts}
-      onEndReachedThreshold={0.1}
-      ListFooterComponent={renderFooter}
-      ListEmptyComponent={renderEmpty}
-      showsVerticalScrollIndicator={false}
-    />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top','left','right','bottom']}>
+      <VisitorBadge onSignup={() => navigation.navigate('ProfileStack' as never)} />
+      <SearchBar
+        value={search}
+        onChangeText={setSearch}
+        placeholder="Rechercher un article ou un membre"
+      />
+      <FilterChips selected={selectedFilter} onSelect={setSelectedFilter} />
+      <FlatList
+        data={products}
+        renderItem={renderProduct}
+        keyExtractor={(item) => item.id.toString()}
+        numColumns={2}
+        columnWrapperStyle={styles.productRow}
+        contentContainerStyle={[styles.scrollContent, { backgroundColor: colors.background }]}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        onEndReached={loadMoreProducts}
+        onEndReachedThreshold={0.1}
+        ListFooterComponent={renderFooter}
+        ListEmptyComponent={renderEmpty}
+        showsVerticalScrollIndicator={false}
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   scrollContent: {
     padding: 16,

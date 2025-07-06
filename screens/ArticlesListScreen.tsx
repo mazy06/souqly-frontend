@@ -12,6 +12,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useFavorites } from '../hooks/useFavorites';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Types pour la navigation
 export type ArticlesListStackParamList = {
@@ -221,7 +222,7 @@ export default function ArticlesListScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top','left','right']}>
       <FlatList
         data={products}
         keyExtractor={item => item.id.toString()}
@@ -237,7 +238,7 @@ export default function ArticlesListScreen() {
             <SearchBar 
               value={search} 
               onChangeText={setSearch}
-              onPressFavorite={() => navigation.navigate('Favorites')}
+              onPressFavorite={() => navigation.getParent()?.navigate('Favoris')}
             />
             <FilterChips selected={selectedFilter} onSelect={setSelectedFilter} />
             <Text style={{ color: colors.text, fontWeight: 'bold', fontSize: 20, margin: 8 }}>Recommandé pour toi</Text>
@@ -245,7 +246,7 @@ export default function ArticlesListScreen() {
         }
         showsVerticalScrollIndicator={false}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -296,7 +297,6 @@ const styles = StyleSheet.create({
   },
   gridContent: {
     padding: 8,
-    paddingBottom: 32,
   },
   skeletonContainer: {
     flex: 1,

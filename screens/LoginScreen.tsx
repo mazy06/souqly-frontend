@@ -6,6 +6,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import CustomHeader from '../components/CustomHeader';
 import Checkbox from 'expo-checkbox';
 import * as ImagePicker from 'expo-image-picker';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoginScreen({ navigation }: { navigation: any }) {
   const { signInWithEmail, signUpWithEmail } = useAuth();
@@ -71,10 +72,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
         result = await signUpWithEmail(email, password, name);
       }
       if (result.success) {
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'Main' }],
-        });
+        // Rien à faire ici, le contexte d'authentification pilote la navigation
       } else {
         setError(result.error || "Échec de l'authentification");
       }
@@ -97,213 +95,220 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
   };
 
   return (
-    <View style={styles.container}>
-      <CustomHeader onBack={() => navigation.reset({ index: 0, routes: [{ name: 'Auth' }] })} />
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        {/* Logo centré */}
-        <View style={styles.logoContainer}>
-          <Image
-            source={require('../assets/images/logo-souqly.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </View>
-        {/* Carte d'auth flottante */}
-        <View style={styles.card}>
-          {/* Tabs login/signup */}
-          <View style={styles.tabRow}>
-            <TouchableOpacity style={[styles.tab, isLogin && styles.tabActive]} onPress={() => handleSwitch(true)}>
-              <Animated.Text style={[styles.tabText, isLogin && styles.tabTextActive]}>Connexion</Animated.Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.tab, !isLogin && styles.tabActive]} onPress={() => handleSwitch(false)}>
-              <Animated.Text style={[styles.tabText, !isLogin && styles.tabTextActive]}>Inscription</Animated.Text>
-            </TouchableOpacity>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <View style={styles.container}>
+        <CustomHeader onBack={() => navigation.reset({
+          index: 0,
+          routes: [
+            { name: 'Auth' }
+          ]
+        })} />
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          {/* Logo centré */}
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('../assets/images/logo-souqly.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
           </View>
-          {/* Champs */}
-          {!isLogin && (
-            <>
-              {/* Photo de profil */}
-              <TouchableOpacity style={styles.profileImagePicker} onPress={handlePickImage} activeOpacity={0.8}>
-                {profileImage ? (
-                  <Image source={{ uri: profileImage }} style={styles.profileImage} />
-                ) : (
-                  <View style={styles.profileImagePlaceholder}>
-                    <Ionicons name="camera-outline" size={28} color={'rgb(0, 128, 128)'} />
-                    <Text style={styles.profileImageText}>Ajouter une photo</Text>
-                  </View>
-                )}
+          {/* Carte d'auth flottante */}
+          <View style={styles.card}>
+            {/* Tabs login/signup */}
+            <View style={styles.tabRow}>
+              <TouchableOpacity style={[styles.tab, isLogin && styles.tabActive]} onPress={() => handleSwitch(true)}>
+                <Animated.Text style={[styles.tabText, isLogin && styles.tabTextActive]}>Connexion</Animated.Text>
               </TouchableOpacity>
-              {/* Pseudo */}
-              <View style={styles.inputWrapper}>
-                <Ionicons name="person-circle-outline" size={20} color={'rgb(0, 128, 128)'} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Pseudo (nom d'utilisateur)"
-                  placeholderTextColor="#aaa"
-                  value={pseudo}
-                  onChangeText={setPseudo}
-                  autoCapitalize="none"
-                  returnKeyType="next"
-                />
-              </View>
-              <View style={styles.inputWrapper}>
-                <Ionicons name="person-outline" size={20} color={'rgb(0, 128, 128)'} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Nom complet"
-                  placeholderTextColor="#aaa"
-                  value={name}
-                  onChangeText={setName}
-                  autoCapitalize="words"
-                  returnKeyType="next"
-                />
-              </View>
-              {/* Téléphone */}
-              <View style={styles.inputWrapper}>
-                <Ionicons name="call-outline" size={20} color={'rgb(0, 128, 128)'} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Numéro de téléphone"
-                  placeholderTextColor="#aaa"
-                  value={phone}
-                  onChangeText={setPhone}
-                  keyboardType="phone-pad"
-                  returnKeyType="next"
-                />
-              </View>
-              {/* Date de naissance */}
-              <View style={styles.inputWrapper}>
-                <Ionicons name="calendar-outline" size={20} color={'rgb(0, 128, 128)'} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Date de naissance (JJ/MM/AAAA)"
-                  placeholderTextColor="#aaa"
-                  value={birthdate}
-                  onChangeText={setBirthdate}
-                  keyboardType="numbers-and-punctuation"
-                  returnKeyType="next"
-                />
-              </View>
-              {/* Genre */}
-              <View style={styles.inputWrapper}>
-                <Ionicons name="male-female-outline" size={20} color={'rgb(0, 128, 128)'} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Genre (optionnel)"
-                  placeholderTextColor="#aaa"
-                  value={gender}
-                  onChangeText={setGender}
-                  returnKeyType="next"
-                />
-              </View>
-              {/* Ville */}
-              <View style={styles.inputWrapper}>
-                <Ionicons name="location-outline" size={20} color={'rgb(0, 128, 128)'} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Ville"
-                  placeholderTextColor="#aaa"
-                  value={city}
-                  onChangeText={setCity}
-                  autoCapitalize="words"
-                  returnKeyType="next"
-                />
-              </View>
-            </>
-          )}
-          <View style={styles.inputWrapper}>
-            <Ionicons name="mail-outline" size={20} color={'rgb(0, 128, 128)'} style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Adresse e-mail"
-              placeholderTextColor="#aaa"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              returnKeyType="next"
-            />
-          </View>
-          <View style={styles.inputWrapper}>
-            <Ionicons name="lock-closed-outline" size={20} color={'rgb(0, 128, 128)'} style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Mot de passe"
-              placeholderTextColor="#aaa"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              returnKeyType="done"
-            />
-            <TouchableOpacity onPress={() => setShowPassword(v => !v)} style={styles.eyeIcon}>
-              <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#aaa" />
-            </TouchableOpacity>
-          </View>
-          {!isLogin && (
+              <TouchableOpacity style={[styles.tab, !isLogin && styles.tabActive]} onPress={() => handleSwitch(false)}>
+                <Animated.Text style={[styles.tabText, !isLogin && styles.tabTextActive]}>Inscription</Animated.Text>
+              </TouchableOpacity>
+            </View>
+            {/* Champs */}
+            {!isLogin && (
+              <>
+                {/* Photo de profil */}
+                <TouchableOpacity style={styles.profileImagePicker} onPress={handlePickImage} activeOpacity={0.8}>
+                  {profileImage ? (
+                    <Image source={{ uri: profileImage }} style={styles.profileImage} />
+                  ) : (
+                    <View style={styles.profileImagePlaceholder}>
+                      <Ionicons name="camera-outline" size={28} color={'rgb(0, 128, 128)'} />
+                      <Text style={styles.profileImageText}>Ajouter une photo</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+                {/* Pseudo */}
+                <View style={styles.inputWrapper}>
+                  <Ionicons name="person-circle-outline" size={20} color={'rgb(0, 128, 128)'} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Pseudo (nom d'utilisateur)"
+                    placeholderTextColor="#aaa"
+                    value={pseudo}
+                    onChangeText={setPseudo}
+                    autoCapitalize="none"
+                    returnKeyType="next"
+                  />
+                </View>
+                <View style={styles.inputWrapper}>
+                  <Ionicons name="person-outline" size={20} color={'rgb(0, 128, 128)'} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Nom complet"
+                    placeholderTextColor="#aaa"
+                    value={name}
+                    onChangeText={setName}
+                    autoCapitalize="words"
+                    returnKeyType="next"
+                  />
+                </View>
+                {/* Téléphone */}
+                <View style={styles.inputWrapper}>
+                  <Ionicons name="call-outline" size={20} color={'rgb(0, 128, 128)'} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Numéro de téléphone"
+                    placeholderTextColor="#aaa"
+                    value={phone}
+                    onChangeText={setPhone}
+                    keyboardType="phone-pad"
+                    returnKeyType="next"
+                  />
+                </View>
+                {/* Date de naissance */}
+                <View style={styles.inputWrapper}>
+                  <Ionicons name="calendar-outline" size={20} color={'rgb(0, 128, 128)'} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Date de naissance (JJ/MM/AAAA)"
+                    placeholderTextColor="#aaa"
+                    value={birthdate}
+                    onChangeText={setBirthdate}
+                    keyboardType="numbers-and-punctuation"
+                    returnKeyType="next"
+                  />
+                </View>
+                {/* Genre */}
+                <View style={styles.inputWrapper}>
+                  <Ionicons name="male-female-outline" size={20} color={'rgb(0, 128, 128)'} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Genre (optionnel)"
+                    placeholderTextColor="#aaa"
+                    value={gender}
+                    onChangeText={setGender}
+                    returnKeyType="next"
+                  />
+                </View>
+                {/* Ville */}
+                <View style={styles.inputWrapper}>
+                  <Ionicons name="location-outline" size={20} color={'rgb(0, 128, 128)'} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Ville"
+                    placeholderTextColor="#aaa"
+                    value={city}
+                    onChangeText={setCity}
+                    autoCapitalize="words"
+                    returnKeyType="next"
+                  />
+                </View>
+              </>
+            )}
+            <View style={styles.inputWrapper}>
+              <Ionicons name="mail-outline" size={20} color={'rgb(0, 128, 128)'} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Adresse e-mail"
+                placeholderTextColor="#aaa"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                returnKeyType="next"
+              />
+            </View>
             <View style={styles.inputWrapper}>
               <Ionicons name="lock-closed-outline" size={20} color={'rgb(0, 128, 128)'} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Confirmer le mot de passe"
+                placeholder="Mot de passe"
                 placeholderTextColor="#aaa"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
+                value={password}
+                onChangeText={setPassword}
                 secureTextEntry={!showPassword}
                 returnKeyType="done"
               />
+              <TouchableOpacity onPress={() => setShowPassword(v => !v)} style={styles.eyeIcon}>
+                <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#aaa" />
+              </TouchableOpacity>
             </View>
-          )}
-          {!isLogin && (
-            <View style={styles.cguRow}>
-              <Checkbox
-                value={acceptCGU}
-                onValueChange={setAcceptCGU}
-                color={acceptCGU ? 'rgb(0, 128, 128)' : '#aaa'}
-                style={styles.cguCheckbox}
-              />
-              <Text style={styles.cguText}>
-                J'accepte les <Text style={styles.cguLink}>Conditions Générales d'Utilisation</Text>
-              </Text>
-            </View>
-          )}
-          {/* Opt-in newsletter */}
-          {!isLogin && (
-            <View style={styles.cguRow}>
-              <Checkbox
-                value={newsletter}
-                onValueChange={setNewsletter}
-                color={newsletter ? 'rgb(0, 128, 128)' : '#aaa'}
-                style={styles.cguCheckbox}
-              />
-              <Text style={styles.cguText}>
-                Je souhaite recevoir les offres et nouveautés Souqly
-              </Text>
-            </View>
-          )}
-          {/* Lien mot de passe oublié */}
-          {isLogin && (
-            <TouchableOpacity style={styles.forgotBtn} onPress={() => {/* TODO: navigation vers reset */}}>
-              <Text style={styles.forgotText}>Mot de passe oublié ?</Text>
-            </TouchableOpacity>
-          )}
-          {/* Erreur */}
-          {error && <Text style={styles.error}>{error}</Text>}
-          {/* Bouton principal */}
-          <TouchableOpacity
-            style={[styles.submitButton, { backgroundColor: 'rgb(0, 128, 128)' }]}
-            onPress={handleSubmit}
-            disabled={loading}
-            activeOpacity={0.85}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.submitButtonText}>{isLogin ? 'Se connecter' : "S'inscrire"}</Text>
+            {!isLogin && (
+              <View style={styles.inputWrapper}>
+                <Ionicons name="lock-closed-outline" size={20} color={'rgb(0, 128, 128)'} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Confirmer le mot de passe"
+                  placeholderTextColor="#aaa"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={!showPassword}
+                  returnKeyType="done"
+                />
+              </View>
             )}
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </View>
+            {!isLogin && (
+              <View style={styles.cguRow}>
+                <Checkbox
+                  value={acceptCGU}
+                  onValueChange={setAcceptCGU}
+                  color={acceptCGU ? 'rgb(0, 128, 128)' : '#aaa'}
+                  style={styles.cguCheckbox}
+                />
+                <Text style={styles.cguText}>
+                  J'accepte les <Text style={styles.cguLink}>Conditions Générales d'Utilisation</Text>
+                </Text>
+              </View>
+            )}
+            {/* Opt-in newsletter */}
+            {!isLogin && (
+              <View style={styles.cguRow}>
+                <Checkbox
+                  value={newsletter}
+                  onValueChange={setNewsletter}
+                  color={newsletter ? 'rgb(0, 128, 128)' : '#aaa'}
+                  style={styles.cguCheckbox}
+                />
+                <Text style={styles.cguText}>
+                  Je souhaite recevoir les offres et nouveautés Souqly
+                </Text>
+              </View>
+            )}
+            {/* Lien mot de passe oublié */}
+            {isLogin && (
+              <TouchableOpacity style={styles.forgotBtn} onPress={() => {/* TODO: navigation vers reset */}}>
+                <Text style={styles.forgotText}>Mot de passe oublié ?</Text>
+              </TouchableOpacity>
+            )}
+            {/* Erreur */}
+            {error && <Text style={styles.error}>{error}</Text>}
+            {/* Bouton principal */}
+            <TouchableOpacity
+              style={[styles.submitButton, { backgroundColor: 'rgb(0, 128, 128)' }]}
+              onPress={handleSubmit}
+              disabled={loading}
+              activeOpacity={0.85}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.submitButtonText}>{isLogin ? 'Se connecter' : "S'inscrire"}</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </View>
+    </SafeAreaView>
   );
 }
 

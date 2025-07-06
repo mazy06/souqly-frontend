@@ -1,0 +1,254 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, RefreshControl, ActivityIndicator, Text, StyleSheet, FlatList, Alert } from 'react-native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import ProductCard from '../components/ProductCard';
+import ProductService, { Product } from '../services/ProductService';
+import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useFavorites } from '../hooks/useFavorites';
+import SearchBar from '../components/SearchBar';
+import FilterChips from '../components/FilterChips';
+import VisitorBadge from '../components/VisitorBadge';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+export type HomeStackParamList = {
+  HomeMain: undefined;
+  ProductDetail: { productId: string };
+};
+
+export default function HomeScreen2() {
+  const navigation = useNavigation<StackNavigationProp<HomeStackParamList>>();
+  const { colors } = useTheme();
+  const { isFavorite, toggleFavorite, refreshFavorites } = useFavorites();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [imageUrls, setImageUrls] = useState<{[key: number]: string}>({});
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalPages, setTotalPages] = useState(0);
+  const [search, setSearch] = useState('');
+  const [selectedFilter, setSelectedFilter] = useState('Voir tout');
+
+  const loadProducts = async (page: number = 0, append: boolean = false) => {
+    try {
+      if (page === 0) {
+        setError(null);
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+      const response = await ProductService.getProducts({
+        page: page,
+        pageSize: 10,
+        sortBy: 'createdAt',
+        sortOrder: 'desc'
+      });
+      setTotalPages(response.totalPages);
+      setCurrentPage(response.currentPage);
+      setHasMore(response.currentPage < response.totalPages - 1);
+      const urls: {[key: number]: string} = {};
+      for (const product of response.content) {
+        try {
+          const imageUrl = await ProductService.getProductImageUrl(product);
+          if (imageUrl) {
+            urls[product.id] = imageUrl;
+          }
+        } catch {}
+      }
+      if (append) {
+        setProducts(prev => [...prev, ...response.content]);
+        setImageUrls(prev => ({ ...prev, ...urls }));
+      } else {
+        setProducts(response.content);
+        setImageUrls(urls);
+      }
+    } catch (err) {
+      setError('Impossible de charger les produits. Veuillez réessayer plus tard.');
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    setCurrentPage(0);
+    setHasMore(true);
+    await loadProducts(0, false);
+    setRefreshing(false);
+  };
+
+  const loadMoreProducts = async () => {
+    if (!loadingMore && hasMore) {
+      const nextPage = currentPage + 1;
+      await loadProducts(nextPage, true);
+    }
+  };
+
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    loadProducts(0, false);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadProducts(0, false);
+      refreshFavorites();
+    }, [])
+  );
+
+  const handleProductPress = (productId: number) => {
+    navigation.navigate('ProductDetail', { productId: productId.toString() });
+  };
+
+  const handleFavoritePress = async (productId: number) => {
+    try {
+      const result = await toggleFavorite(productId);
+      setProducts(prev => 
+        prev.map(product => 
+          product.id === productId 
+            ? { ...product, favoriteCount: result.favoriteCount }
+            : product
+        )
+      );
+    } catch (error) {
+      Alert.alert('Erreur', 'Impossible de modifier les favoris pour le moment');
+    }
+  };
+
+  const renderProduct = ({ item }: { item: Product }) => (
+    <ProductCard
+      title={item.title}
+      brand={item.brand}
+      size={item.size}
+      condition={item.condition}
+      price={item.price.toString()}
+      priceWithFees={item.priceWithFees?.toString()}
+      image={imageUrls[item.id] || 'https://via.placeholder.com/120'}
+      likes={item.favoriteCount}
+      isFavorite={isFavorite(item.id)}
+      onPress={() => handleProductPress(item.id)}
+      onFavoritePress={() => handleFavoritePress(item.id)}
+    />
+  );
+
+  const renderFooter = () => {
+    if (!loadingMore) return null;
+    return (
+      <View style={styles.loadingMoreContainer}>
+        <ActivityIndicator size="small" color={colors.primary} />
+        <Text style={[styles.loadingMoreText, { color: colors.text }]}>Chargement...</Text>
+      </View>
+    );
+  };
+
+  const renderEmpty = () => (
+    <View style={styles.emptyContainer}>
+      <Text style={[styles.emptyText, { color: colors.text }]}>Aucun produit disponible pour le moment</Text>
+      <Text style={[styles.emptySubtext, { color: colors.tabIconDefault }]}>Soyez le premier à publier un article !</Text>
+    </View>
+  );
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background, paddingHorizontal: 16 }]}> 
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.text }]}>Chargement des produits...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background, paddingHorizontal: 16 }]}> 
+        <Text style={[styles.errorText, { color: colors.text }]}>{error}</Text>
+        <Text style={[styles.retryText, { color: colors.tabIconDefault }]}>Tire vers le bas pour réessayer</Text>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background, paddingHorizontal: 16 }]}> 
+      <VisitorBadge onSignup={() => navigation.navigate('ProfileStack' as never)} />
+      <SearchBar
+        value={search}
+        onChangeText={setSearch}
+        placeholder="Rechercher un article ou un membre"
+      />
+      <FilterChips selected={selectedFilter} onSelect={setSelectedFilter} />
+      <FlatList
+        data={products}
+        renderItem={renderProduct}
+        keyExtractor={(item) => item.id.toString()}
+        numColumns={2}
+        columnWrapperStyle={styles.productRow}
+        contentContainerStyle={[styles.scrollContent, { backgroundColor: colors.background }]}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        onEndReached={loadMoreProducts}
+        onEndReachedThreshold={0.1}
+        ListFooterComponent={renderFooter}
+        ListEmptyComponent={renderEmpty}
+        showsVerticalScrollIndicator={false}
+      />
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 16,
+  },
+  productRow: {
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+  },
+  errorText: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  retryText: {
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  loadingMoreContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  loadingMoreText: {
+    marginLeft: 8,
+    fontSize: 14,
+  },
+}); 
