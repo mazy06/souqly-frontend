@@ -65,10 +65,6 @@ export default function ProductCard({
       <Text style={[styles.details, { color: colors.tabIconDefault }]} numberOfLines={1}>
         {size ? size + ' · ' : ''}{condition}
       </Text>
-      <View style={styles.priceRow}>
-        <Text style={[styles.price, { color: colors.text }]}>{price} €</Text>
-        {priceWithFees && <Text style={[styles.priceWithFees, { color: colors.primary }]}>{priceWithFees} € incl.</Text>}
-      </View>
     </TouchableOpacity>
   );
 }
@@ -77,7 +73,6 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     margin: 8,
-    borderRadius: 16,
     overflow: 'hidden',
     minWidth: 160,
     maxWidth: '48%',
@@ -95,14 +90,11 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
   },
   proBadge: {
     position: 'absolute',
     top: 8,
     left: 8,
-    borderRadius: 8,
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
@@ -148,20 +140,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginHorizontal: 8,
     marginBottom: 2,
-  },
-  priceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 8,
-    marginBottom: 10,
-  },
-  price: {
-    fontWeight: 'bold',
-    fontSize: 15,
-    marginRight: 8,
-  },
-  priceWithFees: {
-    fontWeight: 'bold',
-    fontSize: 14,
   },
 }); 

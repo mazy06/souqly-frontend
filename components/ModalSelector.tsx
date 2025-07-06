@@ -47,7 +47,7 @@ const ModalSelector: React.FC<ModalSelectorProps> = ({ label, data, selectedValu
             />
             <FlatList
               data={filteredData}
-              keyExtractor={item => item}
+              keyExtractor={(item, index) => item + '-' + index}
               style={{ height: 350, backgroundColor: '#fff' }}
               ListHeaderComponent={
                 <TouchableOpacity
