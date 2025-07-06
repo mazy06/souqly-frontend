@@ -18,6 +18,9 @@ export interface Product {
   updatedAt: string;
   sellerId: number;
   categoryId: number;
+  latitude?: number;
+  longitude?: number;
+  locationName?: string;
   category?: {
     id: number;
     label: string;

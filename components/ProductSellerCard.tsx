@@ -2,12 +2,13 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 
 interface Seller {
+  id: number;
   firstName: string;
   lastName: string;
-  avatarUrl?: string;
+  profilePicture?: string;
   rating?: number;
   reviewsCount?: number;
-  since?: string;
+  createdAt?: string;
   adsCount?: number;
   isFollowing?: boolean;
 }
@@ -22,7 +23,7 @@ export default function ProductSellerCard({ seller, onFollow }: ProductSellerCar
     <View style={styles.card}>
       <View style={styles.row}>
         <Image
-          source={seller.avatarUrl ? { uri: seller.avatarUrl } : require('../assets/images/icon.png')}
+          source={seller.profilePicture ? { uri: seller.profilePicture } : require('../assets/images/icon.png')}
           style={styles.avatar}
         />
         <View style={styles.info}>
@@ -30,9 +31,9 @@ export default function ProductSellerCard({ seller, onFollow }: ProductSellerCar
           <Text style={styles.stats}>{seller.adsCount ?? 0} annonces</Text>
           <View style={styles.ratingRow}>
             <Text style={styles.rating}>★ {seller.rating?.toFixed(1) ?? '5.0'}</Text>
-            <Text style={styles.reviews}>({seller.reviewsCount ?? 0})</Text>
+            <Text style={styles.reviews}>(12)</Text>
           </View>
-          <Text style={styles.since}>Membre depuis {seller.since ?? 'N/A'}</Text>
+          <Text style={styles.since}>Membre depuis {seller.createdAt ? new Date(seller.createdAt).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' }) : 'N/A'}</Text>
         </View>
         <TouchableOpacity style={styles.followBtn} onPress={onFollow}>
           <Text style={styles.followBtnText}>{seller.isFollowing ? 'Suivi' : 'Suivre'}</Text>

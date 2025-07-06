@@ -47,14 +47,12 @@ export default function ProductInfoSection({
       </View>
 
       {/* Livraison */}
-      {shippingInfo && (
-        <View style={styles.shippingBadge}>
-          <Ionicons name="car-outline" size={16} color="#fff" style={styles.carIcon} />
-          <Text style={styles.shippingText}>
-            Frais de port : {shippingInfo}
-          </Text>
-        </View>
-      )}
+      <View style={styles.shippingBadgeBrown}>
+        <Ionicons name="car-outline" size={16} color="#fff" style={styles.carIcon} />
+        <Text style={styles.shippingTextBrown}>
+          Livraison : {shippingInfo || 'Non renseigné'}
+        </Text>
+      </View>
 
       {/* Description */}
       <View style={styles.descriptionSection}>
@@ -114,22 +112,23 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#008080',
   },
-  shippingBadge: {
+  shippingBadgeBrown: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#008080',
+    backgroundColor: '#A0522D',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
     alignSelf: 'flex-start',
     marginBottom: 20,
+    marginTop: 4,
   },
   carIcon: {
     marginRight: 4,
   },
-  shippingText: {
+  shippingTextBrown: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '500',
   },
   descriptionSection: {

@@ -19,7 +19,13 @@ export default function ProductHeader({ title, isFavorite, favoritesCount = 0, o
   
   return (
     <View style={styles.header}>
-      <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.goBack()}>
+      <TouchableOpacity style={styles.iconBtn} onPress={() => {
+        if (navigation.canGoBack()) {
+          navigation.goBack();
+        } else {
+          navigation.navigate('Accueil'); // ou 'Home' selon le nom de ta route principale
+        }
+      }}>
         <Ionicons name="arrow-back" size={24} color="#181A20" />
       </TouchableOpacity>
       <Text style={styles.title} numberOfLines={1}>{title}</Text>

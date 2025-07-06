@@ -3,6 +3,7 @@ import { View, ScrollView, StyleSheet, ActivityIndicator, Platform, TouchableOpa
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ProductService, { Product } from '../services/ProductService';
+import LocationService, { DistanceData } from '../services/LocationService';
 import ProductHeader from '../components/ProductHeader';
 import ProductActions from '../components/ProductActions';
 import ProductSellerCard from '../components/ProductSellerCard';
@@ -14,6 +15,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
+import ApiService from '../services/ApiService';
 
 type ProductDetailRouteProp = RouteProp<{ ProductDetail: { productId: string } }, 'ProductDetail'>;
 
@@ -28,8 +30,10 @@ export default function ProductDetailScreen() {
   const [favoritesCount, setFavoritesCount] = useState(0);
   const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
   const [similarProducts, setSimilarProducts] = useState<Product[]>([]);
+  const [distanceData, setDistanceData] = useState<DistanceData | null>(null);
   const { colors } = useTheme();
   const screenWidth = Dimensions.get('window').width;
+  const [seller, setSeller] = useState<any>(null);
 
   useEffect(() => {
     if (!productId) return;
@@ -71,6 +75,26 @@ export default function ProductDetailScreen() {
     
     loadProductData();
   }, [productId, isAuthenticated, isGuest]);
+
+  useEffect(() => {
+    if (product && product.seller && product.seller.id) {
+      ApiService.get(`/users/${product.seller.id}`)
+        .then(res => setSeller(res))
+        .catch(() => setSeller(null));
+    }
+  }, [product]);
+
+  useEffect(() => {
+    if (product && product.latitude && product.longitude) {
+      LocationService.calculateDistanceToProduct(product.latitude, product.longitude)
+        .then(distance => {
+          setDistanceData(distance);
+        })
+        .catch(error => {
+          console.log('[ProductDetailScreen] Erreur lors du calcul de la distance:', error);
+        });
+    }
+  }, [product]);
 
   if (loading) return <ActivityIndicator size="large" style={{ flex: 1 }} />;
   if (!product) return null;
@@ -172,6 +196,9 @@ export default function ProductDetailScreen() {
     }
   };
 
+  // Couleur marron pour le badge
+  const brownColor = '#A0522D'; // ou adapte selon ta charte
+
   return (
     <View style={styles.container}>
       {/* Header normal */}
@@ -224,26 +251,19 @@ export default function ProductDetailScreen() {
         />
 
         {/* Carte vendeur */}
-        {product.seller && (
+        {seller && (
           <ProductSellerCard
-            seller={{
-              firstName: product.seller.firstName,
-              lastName: product.seller.lastName,
-              avatarUrl: undefined,
-              rating: undefined,
-              reviewsCount: undefined,
-              since: undefined,
-              adsCount: undefined,
-              isFollowing: undefined,
-            }}
+            seller={seller}
           />
         )}
 
         {/* Localisation */}
         <ProductLocation
-          location="Paris, France"
-          distance="2.5 km"
+          location={product.locationName || "Localisation non spécifiée"}
+          distance={distanceData?.formattedDistance}
           shippingOptions={['Livraison à domicile', 'Point relais', 'Rencontre']}
+          latitude={product.latitude}
+          longitude={product.longitude}
         />
 
         {/* Produits similaires */}
@@ -270,12 +290,12 @@ export default function ProductDetailScreen() {
       </ScrollView>
 
       {/* Footer sticky */}
-      <SafeAreaView style={styles.footerSticky}>
+      <View style={styles.footerSticky}>
         <ProductActions
           onOffer={handleOfferPress}
           onBuy={handleBuyPress}
         />
-      </SafeAreaView>
+      </View>
     </View>
   );
 }
@@ -290,7 +310,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
-    paddingTop: Platform.OS === 'ios' ? 44 : 0,
+    paddingTop: Platform.OS === 'ios' ? 15 : 0,
   },
   scrollView: {
     flex: 1,
@@ -311,10 +331,10 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     zIndex: 9999,
-    backgroundColor: '#fff',
+    backgroundColor: 'white',
     borderTopWidth: 1,
     borderTopColor: '#eee',
-    paddingVertical: 12,
+    paddingVertical: 0,
     paddingHorizontal: 16,
     elevation: 8,
     shadowColor: '#000',
@@ -324,8 +344,8 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    minHeight: 80,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 12,
+    height: 110,
+    justifyContent: 'flex-start',
   },
   photoBadgeBottomRight: {
     position: 'absolute',
@@ -341,6 +361,23 @@ const styles = StyleSheet.create({
   photoBadgeText: {
     color: '#fff',
     fontWeight: 'bold',
+    fontSize: 13,
+  },
+  price: {
+    fontWeight: 'bold',
+    fontSize: 18,
+  },
+  shippingBadge: {
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: '#A0522D', // fallback
+  },
+  shippingBadgeText: {
+    color: '#fff',
+    fontWeight: '500',
     fontSize: 13,
   },
 }); 
