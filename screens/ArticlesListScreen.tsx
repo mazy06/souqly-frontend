@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, ScrollView, StyleSheet, FlatList, Text, RefreshControl, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import { View, ScrollView, StyleSheet, FlatList, Text, RefreshControl, ActivityIndicator, TouchableOpacity, Alert, ActionSheetIOS, Platform } from 'react-native';
 import ProductCard from '../components/ProductCard';
 import PrimaryButton from '../components/PrimaryButton';
 import { useAuth } from '../contexts/AuthContext';
@@ -13,6 +13,7 @@ import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/nativ
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useFavorites } from '../hooks/useFavorites';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 
 // Types pour la navigation
 export type ArticlesListStackParamList = {
@@ -143,6 +144,106 @@ export default function ArticlesListScreen() {
     }
   };
 
+  const handleSearchSubmit = async () => {
+    try {
+      setLoading(true);
+      const response = await ProductService.getProducts({ search });
+      setProducts(response.content || []);
+      setError(null);
+    } catch (err) {
+      setError('Erreur lors de la recherche.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCameraPress = async () => {
+    const pickImage = async (fromCamera: boolean) => {
+      let result;
+      if (fromCamera) {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission refusée', "L'application a besoin de la permission d'utiliser la caméra.");
+          return;
+        }
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: false,
+          quality: 0.7,
+        });
+      } else {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission refusée', "L'application a besoin de la permission d'accéder à la galerie.");
+          return;
+        }
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: false,
+          quality: 0.7,
+        });
+      }
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const photoUri = result.assets[0].uri;
+        try {
+          setLoading(true);
+          const formData = new FormData();
+          formData.append('image', {
+            uri: photoUri,
+            name: 'photo.jpg',
+            type: 'image/jpeg',
+          } as any);
+          // TODO: Recherche par similarité d'image
+          // À terme, l'URL ci-dessous devra pointer vers un microservice Python (Flask/FastAPI)
+          // qui :
+          //   1. Extrait les features de l'image envoyée (embedding via un modèle CNN)
+          //   2. Compare cet embedding à ceux des images produits en base
+          //   3. Retourne les produits les plus similaires (par distance)
+          // Le backend Java devra relayer la requête et retourner la liste des produits similaires
+          const response = await fetch('https://ton-backend/api/products/search-by-image', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'multipart/form-data',
+              // Ajoute l'auth si besoin
+            },
+            body: formData,
+          });
+          if (!response.ok) throw new Error('Erreur lors de la recherche par image');
+          const data = await response.json();
+          setProducts(data.products || []);
+          setError(null);
+        } catch (err) {
+          setError('Erreur lors de la recherche par image.');
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Annuler', 'Prendre une photo', 'Choisir dans la galerie'],
+          cancelButtonIndex: 0,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) pickImage(true);
+          else if (buttonIndex === 2) pickImage(false);
+        }
+      );
+    } else {
+      Alert.alert(
+        'Recherche par image',
+        'Choisissez une option',
+        [
+          { text: 'Prendre une photo', onPress: () => pickImage(true) },
+          { text: 'Choisir dans la galerie', onPress: () => pickImage(false) },
+          { text: 'Annuler', style: 'cancel' },
+        ]
+      );
+    }
+  };
+
   const renderProduct = ({ item }: { item: Product }) => (
     <ProductCard
       title={item.title}
@@ -238,7 +339,8 @@ export default function ArticlesListScreen() {
             <SearchBar 
               value={search} 
               onChangeText={setSearch}
-              onPressFavorite={() => navigation.getParent()?.navigate('Favoris')}
+              onPressCamera={handleCameraPress}
+              onSubmit={handleSearchSubmit}
             />
             <FilterChips selected={selectedFilter} onSelect={setSelectedFilter} />
             <Text style={{ color: colors.text, fontWeight: 'bold', fontSize: 20, margin: 8 }}>Recommandé pour toi</Text>

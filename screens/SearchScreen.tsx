@@ -82,10 +82,24 @@ export default function SearchScreen() {
     });
   };
 
+  const handleSearchSubmit = async () => {
+    if (search.trim()) {
+      console.log('[SearchScreen] Recherche soumise:', search);
+      setSearch(''); // Vider le champ de recherche
+      // Pour l'instant, on peut juste afficher un message ou naviguer
+      // TODO: Implémenter la navigation vers les résultats de recherche
+    }
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}> 
       <View style={styles.header}>
-        <SearchBar value={search} onChangeText={setSearch} placeholder="Rechercher un article ou un membre" />
+        <SearchBar 
+          value={search} 
+          onChangeText={setSearch} 
+          onSubmit={handleSearchSubmit}
+          placeholder="Rechercher un article ou un membre" 
+        />
       </View>
       
       {loading ? (

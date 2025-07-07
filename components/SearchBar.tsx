@@ -3,7 +3,7 @@ import { View, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 
-export default function SearchBar({ value, onChangeText, onPressFavorite, placeholder }: { value: string; onChangeText: (t: string) => void; onPressFavorite?: () => void; placeholder?: string }) {
+export default function SearchBar({ value, onChangeText, onPressCamera, onSubmit, placeholder }: { value: string; onChangeText: (t: string) => void; onPressCamera?: () => void; onSubmit?: () => void; placeholder?: string }) {
   const { colors } = useTheme();
   
   return (
@@ -15,9 +15,10 @@ export default function SearchBar({ value, onChangeText, onPressFavorite, placeh
         placeholderTextColor={colors.tabIconDefault}
         value={value}
         onChangeText={onChangeText}
+        onSubmitEditing={onSubmit}
       />
-      <TouchableOpacity onPress={onPressFavorite} style={styles.heartButton}>
-        <Ionicons name="heart-outline" size={22} color={colors.danger} />
+      <TouchableOpacity onPress={onPressCamera} style={styles.heartButton}>
+        <Ionicons name="camera-outline" size={22} color={colors.primary} />
       </TouchableOpacity>
     </View>
   );

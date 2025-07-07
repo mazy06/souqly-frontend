@@ -39,8 +39,8 @@ export default function HomeScreen() {
   const [search, setSearch] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('Voir tout');
 
-  const loadProducts = async (page: number = 0, append: boolean = false) => {
-    console.log(`[HomeScreen] loadProducts appelé avec page=${page}, append=${append}`);
+  const loadProducts = async (page: number = 0, append: boolean = false, searchTerm?: string) => {
+    console.log(`[HomeScreen] loadProducts appelé avec page=${page}, append=${append}, search=${searchTerm}`);
     try {
       if (page === 0) {
         setError(null);
@@ -53,7 +53,8 @@ export default function HomeScreen() {
         page: page,
         pageSize: 10, // Réduire la taille de page pour plus de fluidité
         sortBy: 'createdAt',
-        sortOrder: 'desc'
+        sortOrder: 'desc',
+        search: searchTerm
       });
 
       // Mettre à jour les métadonnées de pagination
@@ -154,6 +155,14 @@ export default function HomeScreen() {
     }
   };
 
+  const handleSearchSubmit = async () => {
+    if (search.trim()) {
+      console.log('[HomeScreen] Recherche soumise:', search);
+      setSearch(''); // Vider le champ de recherche
+      await loadProducts(0, false, search.trim());
+    }
+  };
+
   const renderProduct = ({ item }: { item: Product }) => (
     <ProductCard
       title={item.title}
@@ -226,6 +235,7 @@ export default function HomeScreen() {
       <SearchBar
         value={search}
         onChangeText={setSearch}
+        onSubmit={handleSearchSubmit}
         placeholder="Rechercher un article ou un membre"
       />
       <FilterChips selected={selectedFilter} onSelect={setSelectedFilter} />
