@@ -2,9 +2,47 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Platform, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import MapView, { Marker } from 'react-native-maps';
+// Ajout pour la traduction des pays
+import countries from 'i18n-iso-countries';
+import fr from 'i18n-iso-countries/langs/fr.json';
+import en from 'i18n-iso-countries/langs/en.json';
+import es from 'i18n-iso-countries/langs/es.json';
+import ar from 'i18n-iso-countries/langs/ar.json';
+import * as Localization from 'expo-localization';
+
+// Enregistre les langues une seule fois
+countries.registerLocale(fr);
+countries.registerLocale(en);
+countries.registerLocale(es);
+countries.registerLocale(ar);
+
+// Fonction robuste pour récupérer la langue utilisateur
+const getUserLang = () => {
+  // Expo SDK 48+ : getLocales() existe
+  if (Localization && typeof Localization.getLocales === 'function') {
+    const locales = Localization.getLocales();
+    if (Array.isArray(locales) && locales.length > 0 && locales[0].languageCode) {
+      return locales[0].languageCode;
+    }
+  }
+  // Fallback sur Localization.locale si dispo
+  if (Localization && typeof (Localization as any).locale === 'string') {
+    return (Localization as any).locale.split('-')[0];
+  }
+  // Fallback final
+  return 'fr';
+};
+
+const getCountryName = (code: string) => {
+  if (!code) return '';
+  const userLang = getUserLang();
+  return countries.getName(code, userLang) || countries.getName(code, 'en') || code;
+};
 
 interface ProductLocationProps {
   location?: string;
+  city?: string;
+  country?: string;
   distance?: string;
   shippingOptions?: string[];
   onLocationPress?: () => void;
@@ -80,6 +118,8 @@ const MapComponent = ({ latitude, longitude, location, screenWidth, mapHeight }:
 
 export default function ProductLocation({
   location,
+  city,
+  country,
   distance,
   shippingOptions = [],
   onLocationPress,
@@ -88,6 +128,18 @@ export default function ProductLocation({
 }: ProductLocationProps) {
   const screenWidth = Dimensions.get('window').width;
   const mapHeight = 200;
+
+  // Nouvelle logique pour afficher la localisation formatée
+  let formattedLocation = 'Localisation non spécifiée';
+  if (city && country) {
+    formattedLocation = `${city}, ${getCountryName(country)}`;
+  } else if (city) {
+    formattedLocation = city;
+  } else if (country) {
+    formattedLocation = getCountryName(country);
+  } else if (location) {
+    formattedLocation = location;
+  }
 
   return (
     <View style={styles.container}>
@@ -103,7 +155,7 @@ export default function ProductLocation({
             </View>
             <View style={styles.locationDetails}>
               <Text style={styles.locationText}>
-                {location || 'Localisation non spécifiée'}
+                {formattedLocation}
               </Text>
               {distance && (
                 <Text style={styles.distanceText}>
@@ -127,7 +179,7 @@ export default function ProductLocation({
               }}
               pointerEvents="none"
             >
-              <Marker coordinate={{ latitude, longitude }} title={location} />
+              <Marker coordinate={{ latitude, longitude }} title={formattedLocation} />
             </MapView>
           </View>
         )}

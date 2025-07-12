@@ -150,10 +150,8 @@ class ProductService {
 
   // Récupérer les produits favoris de l'utilisateur
   async getFavorites(): Promise<Product[]> {
-    console.log('[ProductService] Appel de getFavorites()');
     try {
       const result = await ApiService.get<Product[]>(`${this.baseUrl}/favorites`, true);
-      console.log('[ProductService] Favoris récupérés avec succès:', result);
       return result;
     } catch (error) {
       console.error('[ProductService] Erreur lors de la récupération des favoris:', error);

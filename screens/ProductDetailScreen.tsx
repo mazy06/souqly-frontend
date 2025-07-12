@@ -330,7 +330,8 @@ export default function ProductDetailScreen() {
 
         {/* Localisation */}
         <ProductLocation
-          location={getFormattedLocation(product)}
+          city={product.city}
+          country={product.country}
           distance={distanceData || undefined}
           shippingOptions={['Livraison à domicile', 'Point relais', 'Rencontre']}
           latitude={cityCoords?.lat}

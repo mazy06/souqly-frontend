@@ -11,8 +11,8 @@ import {
   Platform,
   Animated,
   FlatList,
-  Modal,
-  SafeAreaView
+  Modal
+  // SafeAreaView supprimé ici
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ProductImagePicker from '../components/ProductImagePicker';
@@ -32,6 +32,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import GuestMessage from '../components/GuestMessage';
 import SectionHeader from '../components/SectionHeader';
 import { useNavigation } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 countries.registerLocale(require('i18n-iso-countries/langs/fr.json'));
 const cities: { name: string; country: string }[] = citiesRaw as any;
 
@@ -238,8 +239,8 @@ export default function SellScreen() {
     setCityQuery(cityName);
   };
 
-  // Affichage pour invité : header + message, pas de formulaire
-  if (isGuest) {
+  // Affichage pour invité ou non connecté : header + message, pas de formulaire
+  if (isGuest || !isAuthenticated) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top','left','right']}>
         <View style={{ flex: 1, width: '100%' }}>
@@ -274,18 +275,6 @@ export default function SellScreen() {
         )}
 
         <ScrollView contentContainerStyle={{ ...styles.scrollContent, paddingHorizontal: 0 }}>
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <GuestMessage
-              iconName="lock-closed-outline"
-              iconColor={colors.primary}
-              title="Connectez-vous pour publier un ou plusieurs articles"
-              color={colors.primary}
-              textColor={colors.text}
-              backgroundColor={colors.background}
-              onPress={() => logout()}
-            />
-          </View>
-
           {/* Photos */}
           <ProductImagePicker
             imageIds={formData.imageIds}
