@@ -3,7 +3,6 @@ import * as Location from 'expo-location';
 export interface LocationData {
   latitude: number;
   longitude: number;
-  locationName?: string;
 }
 
 export interface DistanceData {
@@ -54,11 +53,11 @@ class LocationService {
 
         if (reverseGeocode.length > 0) {
           const address = reverseGeocode[0];
-          this.userLocation.locationName = [
-            address.city,
-            address.region,
-            address.country
-          ].filter(Boolean).join(', ');
+          // this.userLocation.locationName = [
+          //   address.city,
+          //   address.region,
+          //   address.country
+          // ].filter(Boolean).join(', ');
         }
       } catch (error) {
         console.log('[LocationService] Erreur lors de la géocodification inverse:', error);

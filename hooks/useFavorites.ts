@@ -8,7 +8,7 @@ export function useFavorites() {
   const [loading, setLoading] = useState(false);
 
   const loadFavorites = async () => {
-    if (!isAuthenticated && !isGuest) {
+    if (!isAuthenticated || isGuest) {
       setFavoriteIds(new Set());
       return;
     }

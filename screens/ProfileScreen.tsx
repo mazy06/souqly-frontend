@@ -8,6 +8,9 @@ import { useTheme } from '../contexts/ThemeContext';
 import ThemeToggle from '../components/ThemeToggle';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import GuestMessage from '../components/GuestMessage';
+import SectionHeader from '../components/SectionHeader';
+
 // Définition du type du stack profil
 export type ProfileStackParamList = {
   ProfileMain: undefined;
@@ -17,7 +20,7 @@ export type ProfileStackParamList = {
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
-  const { user, logout } = useAuth(); // user: AuthUser | null
+  const { user, isGuest, logout } = useAuth(); // user: AuthUser | null
   const { colors, themeMode, isDark } = useTheme();
   const [themeModalVisible, setThemeModalVisible] = useState(false);
 
@@ -53,6 +56,24 @@ export default function ProfileScreen() {
         return 'Thème système';
     }
   };
+
+  if (isGuest) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background, flex: 1 }]} edges={['top','left','right']}> 
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <GuestMessage
+            iconName="person-circle-outline"
+            iconColor={colors.primary}
+            title="Connectez-vous pour accéder à votre profil"
+            color={colors.primary}
+            textColor={colors.text}
+            backgroundColor={colors.background}
+            onPress={() => logout()}
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!user) {
     return (

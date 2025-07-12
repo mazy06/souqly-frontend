@@ -21,6 +21,8 @@ export interface Product {
   latitude?: number;
   longitude?: number;
   locationName?: string;
+  city?: string;
+  country?: string;
   category?: {
     id: number;
     label: string;
@@ -51,6 +53,8 @@ export interface CreateProductRequest {
   shippingInfo?: string;
   categoryId: number;
   imageIds: number[];
+  city?: string;
+  country?: string;
 }
 
 export interface ProductFilters {

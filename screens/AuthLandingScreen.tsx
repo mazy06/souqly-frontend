@@ -14,7 +14,7 @@ export default function AuthLandingScreen({ navigation }: { navigation: any }) {
 
   const handleGuestMode = () => {
     guest();
-    navigation.navigate('Main');
+    // Navigation will be handled automatically by AppNavigator based on auth state
   };
 
   const handleSocialAuth = async (provider: 'apple' | 'google' | 'facebook') => {
@@ -33,7 +33,7 @@ export default function AuthLandingScreen({ navigation }: { navigation: any }) {
           break;
       }
       if (result.success) {
-        navigation.navigate('Main');
+        // Navigation will be handled automatically by AppNavigator based on auth state
       } else {
         Alert.alert('Erreur', result.error || "Échec de l'authentification");
       }

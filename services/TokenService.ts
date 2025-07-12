@@ -106,21 +106,16 @@ class TokenService {
    */
   async isAuthenticated(): Promise<boolean> {
     try {
-      console.log('[TokenService] Vérification de l\'authentification...');
       const tokenData = await this.getTokenData();
-      console.log('[TokenService] TokenData récupéré:', tokenData ? 'OUI' : 'NON');
       
       if (!tokenData) {
-        console.log('[TokenService] Aucun token trouvé');
         return false;
       }
 
       const isExpired = await this.isTokenExpired();
-      console.log('[TokenService] Token expiré:', isExpired);
       
       return !isExpired;
     } catch (error) {
-      console.error('[TokenService] Erreur lors de la vérification:', error);
       return false;
     }
   }
@@ -130,7 +125,6 @@ class TokenService {
    */
   async clearTokens(): Promise<void> {
     try {
-      console.log('→ [TokenService] Suppression des tokens');
       await Promise.all([
         AsyncStorage.removeItem(TokenService.ACCESS_TOKEN_KEY),
         AsyncStorage.removeItem(TokenService.REFRESH_TOKEN_KEY),
@@ -138,9 +132,7 @@ class TokenService {
         AsyncStorage.removeItem(TokenService.USER_ID_KEY),
         AsyncStorage.removeItem(TokenService.USER_ROLE_KEY),
       ]);
-      console.log('→ [TokenService] Tokens supprimés');
     } catch (error) {
-      console.log('→ [TokenService] Erreur lors de la suppression des tokens:', error);
       throw new Error('Impossible de supprimer les tokens');
     }
   }

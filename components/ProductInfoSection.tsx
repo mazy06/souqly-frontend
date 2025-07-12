@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   descriptionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#000',
     marginBottom: 8,

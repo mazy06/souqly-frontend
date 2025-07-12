@@ -14,8 +14,7 @@ interface ProductHeaderProps {
 export default function ProductHeader({ title, isFavorite, favoritesCount = 0, onToggleFavorite, onShare }: ProductHeaderProps) {
   const navigation = useNavigation();
   
-  // Log pour déboguer les changements de props
-  console.log('[ProductHeader] Props reçues - isFavorite:', isFavorite, 'favoritesCount:', favoritesCount);
+
   
   return (
     <View style={styles.header}>

@@ -5,18 +5,19 @@ import AuthLandingScreen from '../screens/AuthLandingScreen';
 import LoginScreen from '../screens/LoginScreen';
 import TabNavigator from './TabNavigator';
 import { useAuth } from '../contexts/AuthContext';
+import { navigationRef } from './RootNavigation';
 
 const Stack = createStackNavigator();
 
 export default function AppNavigator() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isGuest, isLoading } = useAuth();
 
   if (isLoading) return null;
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {isAuthenticated ? (
+        {(isAuthenticated || isGuest) ? (
           <Stack.Screen name="Main" component={TabNavigator} />
         ) : (
           <>

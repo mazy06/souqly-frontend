@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Platform, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import MapView, { Marker } from 'react-native-maps';
 
 interface ProductLocationProps {
   location?: string;
@@ -113,21 +114,29 @@ export default function ProductLocation({
           </View>
           <Ionicons name="chevron-forward" size={20} color="#ccc" />
         </View>
-        
-        {/* Carte Plans intégrée dans le même encadré */}
+        {/* Carte centrée sur la ville du produit */}
         {latitude && longitude && (
-          <View style={styles.mapContainer}>
-            <MapComponent
-              latitude={latitude}
-              longitude={longitude}
-              location={location}
-              screenWidth={screenWidth}
-              mapHeight={mapHeight}
-            />
+          <View style={{ height: 180, borderRadius: 12, overflow: 'hidden', marginTop: 12 }}>
+            <MapView
+              style={{ flex: 1 }}
+              initialRegion={{
+                latitude,
+                longitude,
+                latitudeDelta: 0.08,
+                longitudeDelta: 0.08,
+              }}
+              pointerEvents="none"
+            >
+              <Marker coordinate={{ latitude, longitude }} title={location} />
+            </MapView>
           </View>
         )}
       </View>
 
+      {/*
+        TODO: Adapter cette section avec les vraies offres de livraison pour le marché d'Arabie Saoudite
+        (voir avec l'équipe produit/logistique les options disponibles et les intégrer dynamiquement)
+      */}
       {shippingOptions.length > 0 && (
         <View style={styles.shippingSection}>
           <Text style={styles.shippingTitle}>Options de livraison</Text>
@@ -146,8 +155,21 @@ export default function ProductLocation({
           <Text style={styles.meetupTitle}>Rencontre possible</Text>
         </View>
         <Text style={styles.meetupText}>
-          Vous pouvez organiser une rencontre avec le vendeur pour récupérer l'article en personne.
+          Remise en main propre avec paiement sécurisé
         </Text>
+        <View style={styles.meetupBenefits}>
+          <View style={styles.meetupBenefitRow}>
+            <Ionicons name="shield-checkmark" size={16} color="#008080" style={styles.meetupIcon} />
+            <Text style={styles.meetupBenefit}>Réservez ce bien jusqu'au rendez-vous avec le vendeur</Text>
+          </View>
+          <View style={styles.meetupBenefitRow}>
+            <Ionicons name="happy-outline" size={16} color="#008080" style={styles.meetupIcon} />
+            <Text style={styles.meetupBenefit}>Restez libre de refuser ce bien s'il ne correspond pas à vos attentes</Text>
+          </View>
+        </View>
+        <TouchableOpacity style={styles.howItWorksButton}>
+          <Text style={styles.howItWorksText}>Comment ça marche ?</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -256,8 +278,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   shippingTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: 'bold',
     color: '#000',
     marginBottom: 8,
   },
@@ -292,5 +314,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     lineHeight: 20,
+    marginBottom: 8,
+  },
+  meetupBenefits: {
+    marginBottom: 12,
+  },
+  meetupBenefitRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  meetupIcon: {
+    marginRight: 8,
+    marginTop: 1,
+  },
+  meetupBenefit: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 18,
+    flex: 1,
+  },
+  howItWorksButton: {
+    alignSelf: 'flex-start',
+  },
+  howItWorksText: {
+    color: '#008080',
+    fontSize: 14,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
 }); 

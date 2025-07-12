@@ -37,7 +37,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         setThemeModeState(savedThemeMode as ThemeMode);
       }
     } catch (error) {
-      console.log('Erreur lors du chargement des préférences de thème:', error);
+      // Erreur silencieuse
     }
   };
 
@@ -58,7 +58,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       await AsyncStorage.setItem('themeMode', mode);
       setThemeModeState(mode);
     } catch (error) {
-      console.log('Erreur lors de la sauvegarde des préférences de thème:', error);
+      // Erreur silencieuse
     }
   };
 

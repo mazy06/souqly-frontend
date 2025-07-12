@@ -8,6 +8,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import ProductService, { Product } from '../services/ProductService';
 import { useFavorites } from '../hooks/useFavorites';
+import GuestMessage from '../components/GuestMessage';
+import SectionHeader from '../components/SectionHeader';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 
 // Types pour la navigation
 export type FavoritesStackParamList = {
@@ -17,7 +21,7 @@ export type FavoritesStackParamList = {
 
 export default function FavoritesScreen() {
   const navigation = useNavigation<StackNavigationProp<FavoritesStackParamList>>();
-  const { isAuthenticated, isGuest } = useAuth();
+  const { isAuthenticated, isGuest, logout } = useAuth();
   const { colors } = useTheme();
   const { isFavorite, toggleFavorite, refreshFavorites } = useFavorites();
   
@@ -29,14 +33,7 @@ export default function FavoritesScreen() {
   const loadFavorites = async () => {
     try {
       setLoading(true);
-      console.log('[FavoritesScreen] Début du chargement des favoris');
-      console.log('[FavoritesScreen] isAuthenticated:', isAuthenticated);
-      console.log('[FavoritesScreen] isGuest:', isGuest);
-      
       const favoritesList = await ProductService.getFavorites();
-      console.log('[FavoritesScreen] Favoris récupérés:', favoritesList.length);
-      console.log('[FavoritesScreen] Détails des favoris:', favoritesList);
-      
       setFavorites(favoritesList);
       
       // Charger les URLs des images pour chaque produit
@@ -65,17 +62,25 @@ export default function FavoritesScreen() {
     setRefreshing(false);
   };
 
+  // Ajout : si invité, ne pas charger les favoris
   useEffect(() => {
-    if (isAuthenticated || isGuest) {
+    if (isGuest) {
+      setFavorites([]);
+      setLoading(false);
+      return;
+    }
+    if (isAuthenticated) {
       loadFavorites();
     }
   }, [isAuthenticated, isGuest]);
 
   useFocusEffect(
     useCallback(() => {
-      loadFavorites();
-      refreshFavorites();
-    }, [])
+      if (!isGuest) {
+        loadFavorites();
+        refreshFavorites();
+      }
+    }, [isGuest])
   );
 
   const handleProductPress = (productId: number) => {
@@ -154,38 +159,43 @@ export default function FavoritesScreen() {
     );
   }
 
+  // Affichage principal (header toujours visible)
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>Mes Favoris</Text>
-        <Text style={[styles.subtitle, { color: colors.text + '80' }]}>
-          {favorites.length} article{favorites.length !== 1 ? 's' : ''}
-        </Text>
-      </View>
-
-      <FlatList
-        data={favorites}
-        keyExtractor={item => item.id.toString()}
-        numColumns={2}
-        contentContainerStyle={styles.gridContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        renderItem={renderProduct}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="heart-outline" size={64} color={colors.tabIconDefault} />
-            <Text style={[styles.emptyText, { color: colors.text }]}>
-              Aucun favori pour le moment
-            </Text>
-            <Text style={[styles.emptySubtext, { color: colors.tabIconDefault }]}>
-              Ajoutez des articles à vos favoris pour les retrouver ici
-            </Text>
-          </View>
-        }
-        showsVerticalScrollIndicator={false}
-      />
-    </View>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background, flex: 1 }]} edges={['top','left','right']}> 
+      {isGuest ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <GuestMessage
+            iconName="heart-outline"
+            iconColor={colors.primary}
+            title="Connectez-vous pour accéder à vos favoris"
+            color={colors.primary}
+            textColor={colors.text}
+            backgroundColor={colors.background}
+            onPress={() => logout()}
+          />
+        </View>
+      ) : (
+        // ... FlatList des favoris comme avant
+        <FlatList
+          data={favorites}
+          keyExtractor={item => item.id.toString()}
+          numColumns={2}
+          contentContainerStyle={styles.gridContent}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          renderItem={renderProduct}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons name="heart-outline" size={64} color={colors.tabIconDefault} />
+              <Text style={[styles.emptyText, { color: colors.text }]}>Aucun favori pour le moment</Text>
+              <Text style={[styles.emptySubtext, { color: colors.tabIconDefault }]}>Ajoutez des articles à vos favoris pour les retrouver ici</Text>
+            </View>
+          }
+          showsVerticalScrollIndicator={false}
+        />
+      )}
+    </SafeAreaView>
   );
 }
 

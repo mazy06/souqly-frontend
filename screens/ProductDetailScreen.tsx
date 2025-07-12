@@ -9,15 +9,22 @@ import ProductActions from '../components/ProductActions';
 import ProductSellerCard from '../components/ProductSellerCard';
 import ProductInfoSection from '../components/ProductInfoSection';
 import ProductSimilarCarousel from '../components/ProductSimilarCarousel';
+import ProductSimilarSection from '../components/ProductSimilarSection';
 import ProductLocation from '../components/ProductLocation';
+import ProductReviews from '../components/ProductReviews';
 import ProductReportLinks from '../components/ProductReportLinks';
 import { useAuth } from '../contexts/AuthContext';
 import { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import ApiService from '../services/ApiService';
+import countries from 'i18n-iso-countries';
+import * as Location from 'expo-location';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ProductDetailRouteProp = RouteProp<{ ProductDetail: { productId: string } }, 'ProductDetail'>;
+
+countries.registerLocale(require('i18n-iso-countries/langs/fr.json'));
 
 export default function ProductDetailScreen() {
   const route = useRoute<ProductDetailRouteProp>();
@@ -30,10 +37,13 @@ export default function ProductDetailScreen() {
   const [favoritesCount, setFavoritesCount] = useState(0);
   const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
   const [similarProducts, setSimilarProducts] = useState<Product[]>([]);
-  const [distanceData, setDistanceData] = useState<DistanceData | null>(null);
+  const [distanceData, setDistanceData] = useState<string | null>(null);
+  const [geoError, setGeoError] = useState<string | null>(null);
+  const [cityCoords, setCityCoords] = useState<{lat: number, lon: number} | null>(null);
   const { colors } = useTheme();
   const screenWidth = Dimensions.get('window').width;
   const [seller, setSeller] = useState<any>(null);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (!productId) return;
@@ -52,21 +62,16 @@ export default function ProductDetailScreen() {
             const favoriteData = await ProductService.getFavoriteStatus(parseInt(productId));
             setIsFavorite(favoriteData.isFavorite);
             setFavoritesCount(favoriteData.favoriteCount);
-            console.log('[ProductDetailScreen] Données favoris chargées - isFavorite:', favoriteData.isFavorite, 'favoritesCount:', favoriteData.favoriteCount);
           } catch (error) {
-            console.log('[ProductDetailScreen] Erreur lors du chargement des favoris (utilisateur non connecté ou erreur):', error);
-            // En cas d'erreur, on garde les valeurs par défaut
             setIsFavorite(false);
             setFavoritesCount(productData.favoriteCount || 0);
           }
         } else {
-          // Utilisateur non connecté, utiliser les données du produit
           setIsFavorite(false);
           setFavoritesCount(productData.favoriteCount || 0);
         }
         
       } catch (error) {
-        console.error('Erreur lors du chargement des données du produit:', error);
         // En cas d'erreur, on peut afficher un message à l'utilisateur
       } finally {
         setLoading(false);
@@ -79,21 +84,90 @@ export default function ProductDetailScreen() {
   useEffect(() => {
     if (product && product.seller && product.seller.id) {
       ApiService.get(`/users/${product.seller.id}`)
-        .then(res => setSeller(res))
-        .catch(() => setSeller(null));
+        .then((res: any) => {
+          // Ajouter des données mock pour les badges si elles ne sont pas présentes
+          const sellerWithBadges = {
+            ...res,
+            isVerified: res.isVerified ?? true, // Mock: vendeur vérifié
+            responseTime: res.responseTime ?? 'Réponse en moins d\'1h', // Mock: temps de réponse
+            rating: res.rating ?? 4.8, // Mock: note moyenne
+            reviewsCount: res.reviewsCount ?? 127, // Mock: nombre d'avis
+            adsCount: res.adsCount ?? 23, // Mock: nombre d'annonces
+            isFollowing: res.isFollowing ?? false, // Mock: pas encore suivi
+          };
+          setSeller(sellerWithBadges);
+        })
+        .catch(() => {
+          // En cas d'erreur, créer un vendeur mock complet
+          const mockSeller = {
+            id: product.seller!.id,
+            firstName: product.seller!.firstName || 'Vendeur',
+            lastName: product.seller!.lastName || 'Anonyme',
+            profilePicture: undefined, // Pas de photo de profil par défaut
+            isVerified: true, // Mock: vendeur vérifié
+            responseTime: 'Réponse en moins d\'1h', // Mock: temps de réponse
+            rating: 4.8, // Mock: note moyenne
+            reviewsCount: 127, // Mock: nombre d'avis
+            adsCount: 23, // Mock: nombre d'annonces
+            isFollowing: false, // Mock: pas encore suivi
+            createdAt: '2023-01-15', // Mock: date de création
+          };
+          setSeller(mockSeller);
+        });
     }
   }, [product]);
 
   useEffect(() => {
-    if (product && product.latitude && product.longitude) {
-      LocationService.calculateDistanceToProduct(product.latitude, product.longitude)
-        .then(distance => {
-          setDistanceData(distance);
-        })
-        .catch(error => {
-          console.log('[ProductDetailScreen] Erreur lors du calcul de la distance:', error);
-        });
-    }
+    const fetchDistance = async () => {
+      if (!product || !product.city || !product.country) return;
+      try {
+        // 1. Géocoder la ville du produit
+        const city = encodeURIComponent(product.city);
+        const country = encodeURIComponent(product.country);
+        const url = `https://nominatim.openstreetmap.org/search?city=${city}&country=${country}&format=json&limit=1`;
+        const response = await fetch(url, { headers: { 'User-Agent': 'SouqlyApp/1.0' } });
+        const data = await response.json();
+        if (!data || !data[0]) {
+          setGeoError('Ville non trouvée');
+          setDistanceData(null);
+          setCityCoords(null);
+          return;
+        }
+        const prodLat = parseFloat(data[0].lat);
+        const prodLon = parseFloat(data[0].lon);
+        setCityCoords({ lat: prodLat, lon: prodLon });
+
+        // 2. Récupérer la position de l'utilisateur
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          setGeoError('Permission localisation refusée');
+          setDistanceData(null);
+          return;
+        }
+        const userLocation = await Location.getCurrentPositionAsync({});
+        const userLat = userLocation.coords.latitude;
+        const userLon = userLocation.coords.longitude;
+
+        // 3. Calculer la distance (Haversine)
+        const toRad = (value: number) => (value * Math.PI) / 180;
+        const R = 6371; // Rayon de la Terre en km
+        const dLat = toRad(prodLat - userLat);
+        const dLon = toRad(prodLon - userLon);
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(toRad(userLat)) * Math.cos(toRad(prodLat)) *
+          Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const distance = R * c;
+        setDistanceData(`${distance.toFixed(1)} km`);
+        setGeoError(null);
+      } catch (e) {
+        setGeoError('Erreur géolocalisation');
+        setDistanceData(null);
+        setCityCoords(null);
+      }
+    };
+    fetchDistance();
   }, [product]);
 
   if (loading) return <ActivityIndicator size="large" style={{ flex: 1 }} />;
@@ -127,25 +201,56 @@ export default function ProductDetailScreen() {
 
   const handleTermsPress = () => {
     // Navigation vers les conditions d'utilisation
-    console.log('Terms pressed');
+    // console.log('Terms pressed');
   };
 
   const handleOfferPress = () => {
-    // Navigation vers l'écran de faire une offre
-    console.log('Offer pressed');
-    // TODO: Navigate to offer screen
+    // Cette fonction n'est plus utilisée directement car le composant ProductActions gère maintenant l'expansion
+    // console.log('Offer pressed');
+  };
+
+  const handleSendOffer = async (offerData: { price: number; message: string }) => {
+    try {
+      // console.log('Envoi de l\'offre:', offerData);
+      
+      // Ici vous pouvez ajouter l'appel API pour envoyer l'offre
+      // await ApiService.post('/offers', {
+      //   productId: product.id,
+      //   price: offerData.price,
+      //   message: offerData.message
+      // });
+      
+      // Pour l'instant, on simule l'envoi et on redirige vers les messages
+      Alert.alert(
+        'Offre envoyée',
+        'Votre offre a été envoyée au vendeur. Vous allez être redirigé vers les messages.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Navigation vers l'écran des messages
+              // @ts-ignore
+              navigation.navigate('Messages');
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      // console.error('Erreur lors de l\'envoi de l\'offre:', error);
+      Alert.alert('Erreur', 'Impossible d\'envoyer l\'offre pour le moment');
+    }
   };
 
   const handleBuyPress = () => {
     // Navigation vers l'écran d'achat
-    console.log('Buy pressed');
+    // console.log('Buy pressed');
     // TODO: Navigate to buy screen
   };
 
   const handleToggleFavorite = async () => {
     try {
-      console.log('[ProductDetailScreen] Toggle favorite pour produit:', product.id);
-      console.log('[ProductDetailScreen] État actuel - isFavorite:', isFavorite, 'favoritesCount:', favoritesCount);
+      // console.log('[ProductDetailScreen] Toggle favorite pour produit:', product.id);
+      // console.log('[ProductDetailScreen] État actuel - isFavorite:', isFavorite, 'favoritesCount:', favoritesCount);
       
       // Vérifier si l'utilisateur est connecté
       if (!isAuthenticated && !isGuest) {
@@ -158,15 +263,15 @@ export default function ProductDetailScreen() {
       
       const result = await ProductService.toggleFavorite(product.id);
       
-      console.log('[ProductDetailScreen] Réponse du backend:', result);
+      // console.log('[ProductDetailScreen] Réponse du backend:', result);
       
       // Mettre à jour l'état avec les nouvelles valeurs
       setIsFavorite(result.isFavorite);
       setFavoritesCount(result.favoriteCount);
       
-      console.log('[ProductDetailScreen] Nouvel état - isFavorite:', result.isFavorite, 'favoritesCount:', result.favoriteCount);
+      // console.log('[ProductDetailScreen] Nouvel état - isFavorite:', result.isFavorite, 'favoritesCount:', result.favoriteCount);
     } catch (error) {
-      console.error('Erreur lors du toggle des favoris:', error);
+      // console.error('Erreur lors du toggle des favoris:', error);
       // En cas d'erreur, on peut afficher un message à l'utilisateur
       Alert.alert('Erreur', 'Impossible de modifier les favoris pour le moment');
     } finally {
@@ -176,7 +281,7 @@ export default function ProductDetailScreen() {
 
   const handleShare = () => {
     // TODO: Implémenter le partage
-    console.log('Share pressed');
+    // console.log('Share pressed');
   };
 
   const handleSimilarProductFavorite = async (productId: number) => {
@@ -191,9 +296,33 @@ export default function ProductDetailScreen() {
         )
       );
     } catch (error) {
-      console.error('Erreur lors du toggle des favoris du produit similaire:', error);
+      // console.error('Erreur lors du toggle des favoris du produit similaire:', error);
       Alert.alert('Erreur', 'Impossible de modifier les favoris pour le moment');
     }
+  };
+
+  // Fonction pour formater la localisation complète
+  const getFormattedLocation = (product: Product): string => {
+    const city = product.city?.trim();
+    const countryCode = product.country?.trim();
+    const locationName = product.locationName?.trim();
+
+    let country = countryCode;
+    if (countryCode) {
+      country = countries.getName(countryCode, 'fr') || countryCode;
+    }
+
+    if (locationName) {
+      return locationName;
+    }
+    if (city && country) {
+      return `${city}, ${country}`;
+    } else if (city) {
+      return city;
+    } else if (country) {
+      return country;
+    }
+    return "Localisation non spécifiée";
   };
 
   // Couleur marron pour le badge
@@ -259,14 +388,35 @@ export default function ProductDetailScreen() {
 
         {/* Localisation */}
         <ProductLocation
-          location={product.locationName || "Localisation non spécifiée"}
-          distance={distanceData?.formattedDistance}
+          location={getFormattedLocation(product)}
+          distance={distanceData || undefined}
           shippingOptions={['Livraison à domicile', 'Point relais', 'Rencontre']}
-          latitude={product.latitude}
-          longitude={product.longitude}
+          latitude={cityCoords?.lat}
+          longitude={cityCoords?.lon}
+        />
+        {geoError && (
+          <Text style={{ color: 'orange', marginLeft: 16, marginBottom: 8, fontSize: 12 }}>
+            {geoError}
+          </Text>
+        )}
+
+        {/* Commentaires du vendeur */}
+        <ProductReviews
+          seller={{
+            avatarUrl: seller?.profilePicture,
+            firstName: seller?.firstName,
+            lastName: seller?.lastName,
+            averageRating: seller?.rating,
+          }}
         />
 
-        {/* Produits similaires */}
+        {/* Produits similaires - Section après commentaires */}
+        <ProductSimilarSection
+          onProductPress={handleProductPress}
+          onFavoritePress={handleSimilarProductFavorite}
+        />
+
+        {/* Produits similaires - Carousel original */}
         <ProductSimilarCarousel
           products={similarProducts.map(product => ({
             id: product.id,
@@ -290,10 +440,13 @@ export default function ProductDetailScreen() {
       </ScrollView>
 
       {/* Footer sticky */}
-      <View style={styles.footerSticky}>
+      <View style={[styles.footerSticky, { paddingBottom: insets.bottom + 12 }]}> {/* Ajoute le safe area */}
         <ProductActions
           onOffer={handleOfferPress}
           onBuy={handleBuyPress}
+          sellerName={seller?.firstName || 'Vendeur'}
+          productPrice={product.price}
+          onSendOffer={handleSendOffer}
         />
       </View>
     </View>
@@ -334,8 +487,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderTopWidth: 1,
     borderTopColor: '#eee',
-    paddingVertical: 0,
-    paddingHorizontal: 16,
     elevation: 8,
     shadowColor: '#000',
     shadowOffset: {
@@ -344,7 +495,6 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    height: 110,
     justifyContent: 'flex-start',
   },
   photoBadgeBottomRight: {

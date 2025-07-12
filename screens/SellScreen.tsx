@@ -11,7 +11,8 @@ import {
   Platform,
   Animated,
   FlatList,
-  Modal
+  Modal,
+  SafeAreaView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ProductImagePicker from '../components/ProductImagePicker';
@@ -28,6 +29,9 @@ import countries from 'i18n-iso-countries';
 import ModalSelector from '../components/ModalSelector';
 import CategoryService, { Category } from '../services/CategoryService';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import GuestMessage from '../components/GuestMessage';
+import SectionHeader from '../components/SectionHeader';
+import { useNavigation } from '@react-navigation/native';
 countries.registerLocale(require('i18n-iso-countries/langs/fr.json'));
 const cities: { name: string; country: string }[] = citiesRaw as any;
 
@@ -75,8 +79,9 @@ const countryList = Array.from(new Set(cities.map((c: any) => c.country)))
   .sort((a, b) => a.name.localeCompare(b.name));
 
 export default function SellScreen() {
+  const navigation = useNavigation();
   const { colors } = useTheme();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, isGuest, user, logout } = useAuth();
   const insets = useSafeAreaInsets();
   
   const [formData, setFormData] = useState<ProductForm>({
@@ -233,162 +238,188 @@ export default function SellScreen() {
     setCityQuery(cityName);
   };
 
+  // Affichage pour invité : header + message, pas de formulaire
+  if (isGuest) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top','left','right']}>
+        <View style={{ flex: 1, width: '100%' }}>
+          <GuestMessage
+            iconName="lock-closed-outline"
+            iconColor={colors.primary}
+            title="Connectez-vous pour publier un ou plusieurs articles"
+            color={colors.primary}
+            textColor={colors.text}
+            backgroundColor={colors.background}
+            onPress={() => logout()}
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <KeyboardAvoidingView 
-      style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      {/* Message de succès */}
-      {showSuccess && (
-        <View style={styles.successContainer}>
-          <View style={styles.successContent}>
-            <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
-            <Text style={styles.successText}>{successMessage}</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background, flex: 1 }]} edges={['top','left','right']}>
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        {/* Message de succès */}
+        {showSuccess && (
+          <View style={styles.successContainer}>
+            <View style={styles.successContent}>
+              <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+              <Text style={styles.successText}>{successMessage}</Text>
+            </View>
           </View>
-        </View>
-      )}
+        )}
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Vends un article</Text>
-          <Text style={[styles.headerSubtitle, { color: colors.tabIconDefault }]}>
-            Remplis les informations ci-dessous
-          </Text>
-        </View>
+        <ScrollView contentContainerStyle={{ ...styles.scrollContent, paddingHorizontal: 0 }}>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <GuestMessage
+              iconName="lock-closed-outline"
+              iconColor={colors.primary}
+              title="Connectez-vous pour publier un ou plusieurs articles"
+              color={colors.primary}
+              textColor={colors.text}
+              backgroundColor={colors.background}
+              onPress={() => logout()}
+            />
+          </View>
 
-        {/* Photos */}
-        <ProductImagePicker
-          imageIds={formData.imageIds}
-          onChange={(ids) => updateFormData('imageIds', ids)}
-          uploadUrl={getUploadUrl()}
-          getImageUrl={getImageUrlCallback}
-        />
-
-        {/* Titre */}
-        <View style={styles.inputGroup}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Titre *</Text>
-          <TextInput
-            style={[styles.textInput, { backgroundColor: '#fff', color: colors.text, borderColor: colors.border }]}
-            value={formData.title}
-            onChangeText={(text) => updateFormData('title', text)}
-            placeholder="Ex: Robe d'été fleurie"
-            placeholderTextColor={colors.tabIconDefault}
-            maxLength={100}
+          {/* Photos */}
+          <ProductImagePicker
+            imageIds={formData.imageIds}
+            onChange={(ids) => updateFormData('imageIds', ids)}
+            uploadUrl={getUploadUrl()}
+            getImageUrl={getImageUrlCallback}
           />
-          <Text style={[styles.charCount, { color: colors.tabIconDefault }]}>
-            {formData.title.length}/100
-          </Text>
-        </View>
 
-        {/* Description */}
-        <View style={styles.inputGroup}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Description</Text>
-          <TextInput
-            style={[styles.textArea, { backgroundColor: '#fff', color: colors.text, borderColor: colors.border }]}
-            value={formData.description}
-            onChangeText={(text) => updateFormData('description', text)}
-            placeholder="Décris ton article en détail..."
-            placeholderTextColor={colors.tabIconDefault}
-            multiline
-            numberOfLines={4}
-            maxLength={500}
+          {/* Titre */}
+          <View style={styles.inputGroup}>
+            <Text style={[styles.inputLabel, { color: colors.text }]}>Titre *</Text>
+            <TextInput
+              style={[styles.textInput, { backgroundColor: '#fff', color: colors.text, borderColor: colors.border }]}
+              value={formData.title}
+              onChangeText={(text) => updateFormData('title', text)}
+              placeholder="Ex: Robe d'été fleurie"
+              placeholderTextColor={colors.tabIconDefault}
+              maxLength={100}
+            />
+            <Text style={[styles.charCount, { color: colors.tabIconDefault }]}>
+              {formData.title.length}/100
+            </Text>
+          </View>
+
+          {/* Description */}
+          <View style={styles.inputGroup}>
+            <Text style={[styles.inputLabel, { color: colors.text }]}>Description</Text>
+            <TextInput
+              style={[styles.textArea, { backgroundColor: '#fff', color: colors.text, borderColor: colors.border }]}
+              value={formData.description}
+              onChangeText={(text) => updateFormData('description', text)}
+              placeholder="Décris ton article en détail..."
+              placeholderTextColor={colors.tabIconDefault}
+              multiline
+              numberOfLines={4}
+              maxLength={500}
+            />
+            <Text style={[styles.charCount, { color: colors.tabIconDefault }]}>
+              {formData.description.length}/500
+            </Text>
+          </View>
+
+          {/* Catégorie */}
+          <ModalSelector
+            label="Catégorie"
+            data={categoryOptions}
+            selectedValue={categoryOptions.find(opt => opt.startsWith(formData.category + ' - ')) || ''}
+            onSelect={(value) => {
+              const id = value.split(' - ')[0];
+              updateFormData('category', id);
+            }}
+            placeholder="Sélectionner une catégorie"
           />
-          <Text style={[styles.charCount, { color: colors.tabIconDefault }]}>
-            {formData.description.length}/500
-          </Text>
-        </View>
 
-        {/* Catégorie */}
-        <ModalSelector
-          label="Catégorie"
-          data={categoryOptions}
-          selectedValue={categoryOptions.find(opt => opt.startsWith(formData.category + ' - ')) || ''}
-          onSelect={(value) => {
-            const id = value.split(' - ')[0];
-            updateFormData('category', id);
-          }}
-          placeholder="Sélectionner une catégorie"
-        />
+          {/* Marque */}
+          <View style={styles.inputGroup}>
+            <Text style={[styles.inputLabel, { color: colors.text }]}>Marque</Text>
+            <TextInput
+              style={[styles.textInput, { backgroundColor: '#fff', color: colors.text, borderColor: colors.border }]}
+              value={formData.brand}
+              onChangeText={(text) => updateFormData('brand', text)}
+              placeholder="Ex: Zara, H&M, Nike..."
+              placeholderTextColor={colors.tabIconDefault}
+            />
+          </View>
 
-        {/* Marque */}
-        <View style={styles.inputGroup}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Marque</Text>
-          <TextInput
-            style={[styles.textInput, { backgroundColor: '#fff', color: colors.text, borderColor: colors.border }]}
-            value={formData.brand}
-            onChangeText={(text) => updateFormData('brand', text)}
-            placeholder="Ex: Zara, H&M, Nike..."
-            placeholderTextColor={colors.tabIconDefault}
+          {/* Taille */}
+          <ModalSelector
+            label="Taille"
+            data={SIZES}
+            selectedValue={formData.size}
+            onSelect={(value) => updateFormData('size', value)}
+            placeholder="Sélectionner une taille"
           />
-        </View>
 
-        {/* Taille */}
-        <ModalSelector
-          label="Taille"
-          data={SIZES}
-          selectedValue={formData.size}
-          onSelect={(value) => updateFormData('size', value)}
-          placeholder="Sélectionner une taille"
-        />
-
-        {/* État */}
-        <ModalSelector
-          label="État"
-          data={CONDITIONS}
-          selectedValue={formData.condition}
-          onSelect={(value) => updateFormData('condition', value)}
-          placeholder="Sélectionner un état"
-        />
-
-        {/* Prix */}
-        <View style={styles.inputGroup}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Prix *</Text>
-          <TextInput
-            style={[styles.textInput, { backgroundColor: '#fff', color: colors.text, borderColor: colors.border }]}
-            value={formData.price}
-            onChangeText={(text) => updateFormData('price', text.replace(/[^0-9,]/g, ''))}
-            placeholder="0,00 €"
-            placeholderTextColor={colors.tabIconDefault}
-            keyboardType="numeric"
+          {/* État */}
+          <ModalSelector
+            label="État"
+            data={CONDITIONS}
+            selectedValue={formData.condition}
+            onSelect={(value) => updateFormData('condition', value)}
+            placeholder="Sélectionner un état"
           />
-        </View>
 
-        {/* Pays */}
-        <ModalSelector
-          label="Pays *"
-          data={countryList.map(c => c.name)}
-          selectedValue={selectedCountry ? (countryList.find(c => c.code === selectedCountry)?.name || '') : ''}
-          onSelect={(name) => {
-            const country = countryList.find(c => c.name === name);
-            if (country) handleCountryChange(country.code);
-          }}
-          placeholder="Sélectionner un pays"
-        />
+          {/* Prix */}
+          <View style={styles.inputGroup}>
+            <Text style={[styles.inputLabel, { color: colors.text }]}>Prix *</Text>
+            <TextInput
+              style={[styles.textInput, { backgroundColor: '#fff', color: colors.text, borderColor: colors.border }]}
+              value={formData.price}
+              onChangeText={(text) => updateFormData('price', text.replace(/[^0-9,]/g, ''))}
+              placeholder="0,00 €"
+              placeholderTextColor={colors.tabIconDefault}
+              keyboardType="numeric"
+            />
+          </View>
 
-        {/* Ville */}
-        <ModalSelector
-          label="Ville *"
-          data={filteredCities}
-          selectedValue={selectedCity}
-          onSelect={handleCityChange}
-          placeholder="Sélectionner une ville"
-          disabled={!selectedCountry}
-        />
+          {/* Pays */}
+          <ModalSelector
+            label="Pays *"
+            data={countryList.map(c => c.name)}
+            selectedValue={selectedCountry ? (countryList.find(c => c.code === selectedCountry)?.name || '') : ''}
+            onSelect={(name) => {
+              const country = countryList.find(c => c.name === name);
+              if (country) handleCountryChange(country.code);
+            }}
+            placeholder="Sélectionner un pays"
+          />
 
-        {/* Bouton de soumission */}
-        <TouchableOpacity 
-          style={[styles.submitButton, { 
-            backgroundColor: formData.title && formData.price && formData.imageIds.length > 0 
-              ? '#008080' 
-              : '#ccc'
-          }]}
-          onPress={handleSubmit}
-          disabled={!formData.title || !formData.price || formData.imageIds.length === 0}
-        >
-          <Text style={styles.submitButtonText}>Publier l'article</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          {/* Ville */}
+          <ModalSelector
+            label="Ville *"
+            data={filteredCities}
+            selectedValue={selectedCity}
+            onSelect={handleCityChange}
+            placeholder="Sélectionner une ville"
+            disabled={!selectedCountry}
+          />
+
+          {/* Bouton de soumission */}
+          <TouchableOpacity 
+            style={[styles.submitButton, { 
+              backgroundColor: formData.title && formData.price && formData.imageIds.length > 0 
+                ? '#008080' 
+                : '#ccc'
+            }]}
+            onPress={handleSubmit}
+            disabled={!formData.title || !formData.price || formData.imageIds.length === 0}
+          >
+            <Text style={styles.submitButtonText}>Publier l'article</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -397,11 +428,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    paddingTop: 16,
     paddingBottom: 100,
   },
   header: {
     marginBottom: 24,
+    paddingTop: 60,
   },
   headerTitle: {
     fontSize: 24,
@@ -503,5 +535,25 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#2E7D32',
     flex: 1,
+  },
+  authTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  authSubtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  authButton: {
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 8,
+  },
+  authButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '600',
   },
 }); 
