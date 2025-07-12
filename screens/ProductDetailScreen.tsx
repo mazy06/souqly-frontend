@@ -11,20 +11,16 @@ import ProductInfoSection from '../components/ProductInfoSection';
 import ProductSimilarCarousel from '../components/ProductSimilarCarousel';
 import ProductSimilarSection from '../components/ProductSimilarSection';
 import ProductLocation from '../components/ProductLocation';
-import ProductReviews from '../components/ProductReviews';
 import ProductReportLinks from '../components/ProductReportLinks';
 import { useAuth } from '../contexts/AuthContext';
 import { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import ApiService from '../services/ApiService';
-import countries from 'i18n-iso-countries';
 import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ProductDetailRouteProp = RouteProp<{ ProductDetail: { productId: string } }, 'ProductDetail'>;
-
-countries.registerLocale(require('i18n-iso-countries/langs/fr.json'));
 
 export default function ProductDetailScreen() {
   const route = useRoute<ProductDetailRouteProp>();
@@ -201,25 +197,14 @@ export default function ProductDetailScreen() {
 
   const handleTermsPress = () => {
     // Navigation vers les conditions d'utilisation
-    // console.log('Terms pressed');
   };
 
   const handleOfferPress = () => {
     // Cette fonction n'est plus utilisée directement car le composant ProductActions gère maintenant l'expansion
-    // console.log('Offer pressed');
   };
 
   const handleSendOffer = async (offerData: { price: number; message: string }) => {
     try {
-      // console.log('Envoi de l\'offre:', offerData);
-      
-      // Ici vous pouvez ajouter l'appel API pour envoyer l'offre
-      // await ApiService.post('/offers', {
-      //   productId: product.id,
-      //   price: offerData.price,
-      //   message: offerData.message
-      // });
-      
       // Pour l'instant, on simule l'envoi et on redirige vers les messages
       Alert.alert(
         'Offre envoyée',
@@ -236,43 +221,23 @@ export default function ProductDetailScreen() {
         ]
       );
     } catch (error) {
-      // console.error('Erreur lors de l\'envoi de l\'offre:', error);
       Alert.alert('Erreur', 'Impossible d\'envoyer l\'offre pour le moment');
     }
   };
 
   const handleBuyPress = () => {
-    // Navigation vers l'écran d'achat
-    // console.log('Buy pressed');
-    // TODO: Navigate to buy screen
+    Alert.alert('Achat', 'Fonctionnalité d\'achat à implémenter');
   };
 
   const handleToggleFavorite = async () => {
+    if (isTogglingFavorite) return;
+    
     try {
-      // console.log('[ProductDetailScreen] Toggle favorite pour produit:', product.id);
-      // console.log('[ProductDetailScreen] État actuel - isFavorite:', isFavorite, 'favoritesCount:', favoritesCount);
-      
-      // Vérifier si l'utilisateur est connecté
-      if (!isAuthenticated && !isGuest) {
-        Alert.alert('Connexion requise', 'Vous devez être connecté pour ajouter des articles à vos favoris');
-        return;
-      }
-      
-      if (isTogglingFavorite) return;
       setIsTogglingFavorite(true);
-      
-      const result = await ProductService.toggleFavorite(product.id);
-      
-      // console.log('[ProductDetailScreen] Réponse du backend:', result);
-      
-      // Mettre à jour l'état avec les nouvelles valeurs
+      const result = await ProductService.toggleFavorite(parseInt(productId));
       setIsFavorite(result.isFavorite);
       setFavoritesCount(result.favoriteCount);
-      
-      // console.log('[ProductDetailScreen] Nouvel état - isFavorite:', result.isFavorite, 'favoritesCount:', result.favoriteCount);
     } catch (error) {
-      // console.error('Erreur lors du toggle des favoris:', error);
-      // En cas d'erreur, on peut afficher un message à l'utilisateur
       Alert.alert('Erreur', 'Impossible de modifier les favoris pour le moment');
     } finally {
       setIsTogglingFavorite(false);
@@ -280,23 +245,13 @@ export default function ProductDetailScreen() {
   };
 
   const handleShare = () => {
-    // TODO: Implémenter le partage
-    // console.log('Share pressed');
+    Alert.alert('Partager', 'Fonctionnalité de partage à implémenter');
   };
 
   const handleSimilarProductFavorite = async (productId: number) => {
     try {
-      const result = await ProductService.toggleFavorite(productId);
-      // Mettre à jour l'état du produit similaire dans la liste
-      setSimilarProducts(prev => 
-        prev.map(product => 
-          product.id === productId 
-            ? { ...product, isFavorite: result.isFavorite }
-            : product
-        )
-      );
+      await ProductService.toggleFavorite(productId);
     } catch (error) {
-      // console.error('Erreur lors du toggle des favoris du produit similaire:', error);
       Alert.alert('Erreur', 'Impossible de modifier les favoris pour le moment');
     }
   };
@@ -308,9 +263,6 @@ export default function ProductDetailScreen() {
     const locationName = product.locationName?.trim();
 
     let country = countryCode;
-    if (countryCode) {
-      country = countries.getName(countryCode, 'fr') || countryCode;
-    }
 
     if (locationName) {
       return locationName;
@@ -324,9 +276,6 @@ export default function ProductDetailScreen() {
     }
     return "Localisation non spécifiée";
   };
-
-  // Couleur marron pour le badge
-  const brownColor = '#A0522D'; // ou adapte selon ta charte
 
   return (
     <View style={styles.container}>
@@ -379,13 +328,6 @@ export default function ProductDetailScreen() {
           shippingInfo={product.shippingInfo}
         />
 
-        {/* Carte vendeur */}
-        {seller && (
-          <ProductSellerCard
-            seller={seller}
-          />
-        )}
-
         {/* Localisation */}
         <ProductLocation
           location={getFormattedLocation(product)}
@@ -400,15 +342,12 @@ export default function ProductDetailScreen() {
           </Text>
         )}
 
-        {/* Commentaires du vendeur */}
-        <ProductReviews
-          seller={{
-            avatarUrl: seller?.profilePicture,
-            firstName: seller?.firstName,
-            lastName: seller?.lastName,
-            averageRating: seller?.rating,
-          }}
-        />
+        {/* Carte vendeur */}
+        {seller && (
+          <ProductSellerCard
+            seller={seller}
+          />
+        )}
 
         {/* Produits similaires - Section après commentaires */}
         <ProductSimilarSection
@@ -417,19 +356,21 @@ export default function ProductDetailScreen() {
         />
 
         {/* Produits similaires - Carousel original */}
-        <ProductSimilarCarousel
-          products={similarProducts.map(product => ({
-            id: product.id,
-            title: product.title,
-            price: product.price,
-            imageUrl: product.images && product.images.length > 0 
-              ? ProductService.getImageUrl(product.images[0].id)
-              : 'https://via.placeholder.com/120',
-            isFavorite: false, // Par défaut, on ne peut pas savoir si c'est un favori sans être connecté
-          }))}
-          onProductPress={handleProductPress}
-          onFavoritePress={handleSimilarProductFavorite}
-        />
+        {similarProducts.length > 0 && (
+          <ProductSimilarCarousel
+            products={similarProducts.map(product => ({
+              id: product.id,
+              title: product.title,
+              price: product.price,
+              imageUrl: product.images && product.images.length > 0 
+                ? ProductService.getImageUrl(product.images[0].id)
+                : 'https://via.placeholder.com/120',
+              isFavorite: false, // Par défaut, on ne peut pas savoir si c'est un favori sans être connecté
+            }))}
+            onProductPress={handleProductPress}
+            onFavoritePress={handleSimilarProductFavorite}
+          />
+        )}
 
         {/* Liens de signalement et aide */}
         <ProductReportLinks
@@ -440,7 +381,7 @@ export default function ProductDetailScreen() {
       </ScrollView>
 
       {/* Footer sticky */}
-      <View style={[styles.footerSticky, { paddingBottom: insets.bottom + 12 }]}> {/* Ajoute le safe area */}
+      <View style={[styles.footerSticky, { paddingBottom: insets.bottom + 12 }]}>
         <ProductActions
           onOffer={handleOfferPress}
           onBuy={handleBuyPress}
