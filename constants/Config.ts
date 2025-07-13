@@ -6,7 +6,10 @@ export type Environment = 'development' | 'staging' | 'production';
 // Configuration par environnement
 const ENV_CONFIG = {
   development: {
-    apiBaseUrl: Platform.OS === 'web' ? 'http://localhost:8080' : 'http://192.168.1.153:8080',
+    // Utiliser localhost pour le développement web et une URL configurable pour mobile
+    apiBaseUrl: Platform.OS === 'web' 
+      ? 'http://localhost:8080' 
+      : (process.env.EXPO_PUBLIC_DEV_API_URL || 'http://localhost:8080'),
     apiPath: '/api',
   },
   staging: {

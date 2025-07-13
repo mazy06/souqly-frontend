@@ -35,6 +35,9 @@ export default function ProductCard({
 }: Props) {
   const { colors } = useTheme();
 
+  // Log pour debug
+  console.log('[DEBUG] ProductCard props:', { title, brand, size, condition, price, priceWithFees, image, likes, isPro, isFavorite });
+
   return (
     <TouchableOpacity style={[styles.card, { backgroundColor: colors.card }]} onPress={onPress} activeOpacity={0.85}>
       <View style={[styles.imageContainer, { backgroundColor: colors.border }]}>

@@ -3,6 +3,7 @@ import { View, ScrollView, StyleSheet, ActivityIndicator, Platform, TouchableOpa
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ProductService, { Product } from '../services/ProductService';
+import ConversationService from '../services/ConversationService';
 import LocationService, { DistanceData } from '../services/LocationService';
 import ProductHeader from '../components/ProductHeader';
 import ProductActions from '../components/ProductActions';
@@ -205,22 +206,43 @@ export default function ProductDetailScreen() {
 
   const handleSendOffer = async (offerData: { price: number; message: string }) => {
     try {
-      // Pour l'instant, on simule l'envoi et on redirige vers les messages
+      if (!product || !product.seller) {
+        Alert.alert('Erreur', 'Impossible de contacter le vendeur');
+        return;
+      }
+
+      // Créer une nouvelle conversation avec le vendeur
+      const conversation = await ConversationService.createConversation({
+        sellerId: product.seller.id,
+        productId: product.id,
+        initialMessage: offerData.message,
+        offerPrice: offerData.price,
+      });
+
       Alert.alert(
         'Offre envoyée',
-        'Votre offre a été envoyée au vendeur. Vous allez être redirigé vers les messages.',
+        'Votre offre a été envoyée au vendeur. Vous allez être redirigé vers la conversation.',
         [
           {
             text: 'OK',
             onPress: () => {
-              // Navigation vers l'écran des messages
+              // Navigation vers la conversation créée
               // @ts-ignore
-              navigation.navigate('Messages');
+              navigation.navigate('Messages', {
+                screen: 'Conversation',
+                params: {
+                  conversationId: conversation.id,
+                  name: `${product.seller?.firstName} ${product.seller?.lastName}`,
+                  avatarUrl: undefined,
+                  productId: product.id,
+                }
+              });
             }
           }
         ]
       );
     } catch (error) {
+      console.error('[ProductDetailScreen] Erreur lors de la création de conversation:', error);
       Alert.alert('Erreur', 'Impossible d\'envoyer l\'offre pour le moment');
     }
   };

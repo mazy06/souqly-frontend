@@ -274,7 +274,7 @@ export default function SellScreen() {
           </View>
         )}
 
-        <ScrollView contentContainerStyle={{ ...styles.scrollContent, paddingHorizontal: 0 }}>
+        <ScrollView contentContainerStyle={{ ...styles.scrollContent, paddingHorizontal: 16 }}>
           {/* Photos */}
           <ProductImagePicker
             imageIds={formData.imageIds}

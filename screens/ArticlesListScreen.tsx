@@ -14,6 +14,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { useFavorites } from '../hooks/useFavorites';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import { getImageUrl } from '../constants/Config';
 
 // Types pour la navigation
 export type ArticlesListStackParamList = {
@@ -31,6 +32,7 @@ function FavoritesScreen() {
 }
 
 export default function ArticlesListScreen() {
+  console.log('[DEBUG] ArticlesListScreen rendu');
   const navigation = useNavigation<StackNavigationProp<ArticlesListStackParamList>>();
   const route = useRoute();
   const { logout, isGuest, isAuthenticated } = useAuth();
@@ -48,6 +50,7 @@ export default function ArticlesListScreen() {
   const [imageUrls, setImageUrls] = useState<{[key: number]: string}>({});
 
   const loadProducts = async (page: number = 0, append: boolean = false) => {
+    console.log('[DEBUG] loadProducts appelée avec page:', page, 'append:', append);
     try {
       if (append) {
         setLoadingMore(true);
@@ -55,6 +58,7 @@ export default function ArticlesListScreen() {
         setLoading(true);
       }
       
+      console.log('[DEBUG] Appel à ProductService.getProducts');
       const response = await ProductService.getProducts({
         page,
         pageSize: 10,
@@ -252,11 +256,10 @@ export default function ArticlesListScreen() {
       condition={item.condition}
       price={item.price.toString()}
       priceWithFees={item.priceWithFees?.toString()}
-      image={imageUrls[item.id] || 'https://via.placeholder.com/120'}
+      image={item.images && item.images.length > 0 ? getImageUrl(item.images[0].id) : 'https://via.placeholder.com/120'}
       likes={item.favoriteCount}
       isFavorite={isFavorite(item.id)}
       onPress={() => handleProductPress(item.id)}
-      onFavoritePress={() => handleFavoritePress(item.id)}
     />
   );
 
@@ -322,6 +325,8 @@ export default function ArticlesListScreen() {
     );
   }
 
+  // Avant le return principal
+  console.log('[DEBUG] products à afficher:', products);
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top','left','right']}>
       <FlatList

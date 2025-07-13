@@ -17,9 +17,11 @@ export default function SearchBar({ value, onChangeText, onPressCamera, onSubmit
         onChangeText={onChangeText}
         onSubmitEditing={onSubmit}
       />
-      <TouchableOpacity onPress={onPressCamera} style={styles.heartButton}>
-        <Ionicons name="camera-outline" size={22} color={colors.primary} />
-      </TouchableOpacity>
+      {onPressCamera && (
+        <TouchableOpacity onPress={onPressCamera} style={styles.heartButton}>
+          <Ionicons name="camera-outline" size={22} color={colors.primary} />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }

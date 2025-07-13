@@ -1,5 +1,6 @@
 import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
 import MessagesScreen from '../screens/MessagesScreen';
+import ConversationScreen from '../screens/ConversationScreen';
 
 const Stack = createStackNavigator();
 
@@ -13,6 +14,7 @@ export default function MessagesStack() {
       }}
     >
       <Stack.Screen name="MessagesMain" component={MessagesScreen} />
+      <Stack.Screen name="Conversation" component={ConversationScreen} />
     </Stack.Navigator>
   );
 } 

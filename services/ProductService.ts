@@ -1,5 +1,5 @@
 import ApiService from './ApiService';
-import { getImageUrl } from '../constants/Config';
+import { getImageUrl, API_CONFIG } from '../constants/Config';
 
 export interface Product {
   id: number;
@@ -83,6 +83,7 @@ class ProductService {
     currentPage: number;
     size: number;
   }> {
+    console.log('[DEBUG] getProducts appelée avec:', filters);
     const queryParams = new URLSearchParams();
     
     if (filters.categoryId) queryParams.append('categoryId', filters.categoryId.toString());
@@ -99,6 +100,8 @@ class ProductService {
     if (filters.status) queryParams.append('status', filters.status);
 
     const url = `${this.baseUrl}?${queryParams.toString()}`;
+    // Affiche l'URL complète appelée (pour debug)
+    console.log('[DEBUG] URL getProducts:', `${API_CONFIG.baseURL}${API_CONFIG.apiPath}${url}`);
     
     try {
       const result = await ApiService.get<{
@@ -108,6 +111,17 @@ class ProductService {
         currentPage: number;
         size: number;
       }>(url, false);
+      // Affiche le résultat de l'API (pour debug)
+      console.log('[DEBUG] Résultat getProducts:', result);
+      if (result && Array.isArray(result.content)) {
+        console.log('[DEBUG] Nombre de produits retournés:', result.content.length);
+        // Suppression du log du premier produit pour éviter d'afficher les images base64
+        // if (result.content.length > 0) {
+        //   console.log('[DEBUG] Premier produit:', result.content[0]);
+        // }
+      } else {
+        console.log('[DEBUG] Format inattendu pour result:', result);
+      }
       return result;
     } catch (error) {
       console.error('[ProductService] Erreur lors de la récupération des produits:', error);
