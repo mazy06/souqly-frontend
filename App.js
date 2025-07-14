@@ -5,6 +5,7 @@ import { LoaderProvider } from './contexts/LoaderContext';
 import { ToastProvider } from './contexts/ToastContext';
 import AppNavigator from './navigation/AppNavigator';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { UnreadConversationsProvider } from './contexts/UnreadConversationsContext';
 
 export default function App() {
   return (
@@ -13,7 +14,9 @@ export default function App() {
         <AuthProvider>
           <LoaderProvider>
             <ToastProvider>
-              <AppNavigator />
+              <UnreadConversationsProvider>
+                <AppNavigator />
+              </UnreadConversationsProvider>
             </ToastProvider>
           </LoaderProvider>
         </AuthProvider>

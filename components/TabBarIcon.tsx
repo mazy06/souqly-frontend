@@ -1,7 +1,8 @@
 import React from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../constants/Colors';
-import { useColorScheme } from 'react-native';
+import { useColorScheme, View, Text } from 'react-native';
+import { useUnreadConversations } from '../contexts/UnreadConversationsContext';
 
 type TabBarIconProps = {
   route: string;
@@ -12,6 +13,7 @@ type TabBarIconProps = {
 export default function TabBarIcon({ route, color, focused }: TabBarIconProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { unreadCount } = useUnreadConversations();
 
   let iconName;
   switch (route) {
@@ -36,5 +38,26 @@ export default function TabBarIcon({ route, color, focused }: TabBarIconProps) {
     default:
       iconName = 'ellipse';
   }
-  return <Ionicons name={iconName as any} size={24} color={color} />;
+
+  return (
+    <View>
+      <Ionicons name={iconName as any} size={24} color={color} />
+      {route === 'Messages' && unreadCount > 0 && (
+        <View style={{
+          position: 'absolute',
+          right: -6,
+          top: -3,
+          backgroundColor: 'red',
+          borderRadius: 8,
+          minWidth: 16,
+          height: 16,
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingHorizontal: 3,
+        }}>
+          <Text style={{ color: 'white', fontSize: 11, fontWeight: 'bold' }}>{unreadCount}</Text>
+        </View>
+      )}
+    </View>
+  );
 } 

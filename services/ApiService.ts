@@ -117,7 +117,16 @@ class ApiService {
       throw new Error(errorData.message || `Erreur HTTP: ${response.status}`);
     }
 
-    return response.json();
+    // Correction : gérer les réponses vides ou non JSON
+    const text = await response.text();
+    if (!text) {
+      return null as T;
+    }
+    try {
+      return JSON.parse(text);
+    } catch {
+      return null as T;
+    }
   }
 
   /**

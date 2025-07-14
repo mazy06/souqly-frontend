@@ -20,6 +20,9 @@ import ConversationService, { Message, Conversation } from '../services/Conversa
 import ConversationProductCard from '../components/ConversationProductCard';
 import ProductService, { Product } from '../services/ProductService';
 import OfferMessage from '../components/OfferMessage';
+import { connectChatSocket, disconnectChatSocket, sendChatMessage } from '../services/ChatSocketService';
+import TokenService from '../services/TokenService';
+import { useUnreadConversations } from '../contexts/UnreadConversationsContext';
 
 interface ConversationRouteParams {
   conversationId: string;
@@ -40,6 +43,7 @@ export default function ConversationScreen() {
   const [product, setProduct] = useState<Product | null>(null);
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [otherUserName, setOtherUserName] = useState<string>('');
+  const { refreshUnreadCount } = useUnreadConversations();
 
   const params = route.params as ConversationRouteParams;
 
@@ -76,6 +80,15 @@ export default function ConversationScreen() {
             isFromMe: !!(user && (msg.sender === user.email || msg.sender === user.id)),
           }));
           setMessages(mapped);
+          
+          // Marquer la conversation comme lue
+          try {
+            await ConversationService.markAsRead(params.conversationId);
+            await refreshUnreadCount();
+            console.log('[ConversationScreen] Conversation marquée comme lue');
+          } catch (error) {
+            console.error('[ConversationScreen] Erreur lors du marquage comme lu:', error);
+          }
         }
 
         // Charger le produit
@@ -96,20 +109,79 @@ export default function ConversationScreen() {
     };
 
     loadConversationData();
+
+    // Connecter au WebSocket pour les messages temps réel
+    if (params?.conversationId && user) {
+      TokenService.getAccessToken().then(token => {
+        if (token) {
+          connectChatSocket(token, params.conversationId, (newMessage) => {
+            // Vérifier si le message vient d'un autre utilisateur
+            const isFromOtherUser = !!(user && newMessage.sender !== user.email && newMessage.sender !== user.id);
+
+            if (!isFromOtherUser) {
+              // C'est moi qui ai envoyé ce message, ne rien faire
+              return;
+            }
+
+            // Ajouter le nouveau message à la liste
+            setMessages(prev => [...prev, {
+              ...newMessage,
+              isFromMe: false,
+            }]);
+
+            // Notification locale si le message vient d'un autre utilisateur
+            // Vibration ou son pour notifier l'utilisateur
+            console.log('[ConversationScreen] Nouveau message de', newMessage.sender);
+            // TODO: Ajouter une vraie notification push ici
+            // Marquer comme lu immédiatement si on est dans la conversation
+            ConversationService.markAsRead(params.conversationId).then(() => {
+              refreshUnreadCount();
+            });
+          });
+        }
+      });
+    }
+
+    // Cleanup: déconnecter le WebSocket
+    return () => {
+      disconnectChatSocket();
+    };
   }, [params?.conversationId, params?.productId, user]);
 
   const sendMessage = async () => {
     if (newMessage.trim() && params?.conversationId) {
       try {
+        // Envoyer via WebSocket pour un affichage immédiat
+        const messageData = {
+          sender: user?.email || user?.id,
+          content: newMessage.trim(),
+          conversationId: params.conversationId,
+        };
+        
+        // Envoyer via WebSocket (temps réel)
+        sendChatMessage(params.conversationId, messageData);
+        
+        // Envoyer via API REST (persistance)
         const message = await ConversationService.sendMessage({
           conversationId: params.conversationId,
           text: newMessage.trim(),
           productId: params.productId,
         });
-        setMessages(prev => [...prev, {
-          ...message,
-          isFromMe: true,
-        }]);
+        
+        // Ajouter le message à la liste (si pas déjà ajouté par WebSocket)
+        setMessages(prev => {
+          const messageExists = prev.some(msg => 
+            msg.text === newMessage.trim() && msg.isFromMe
+          );
+          if (!messageExists) {
+            return [...prev, {
+              ...message,
+              isFromMe: true,
+            }];
+          }
+          return prev;
+        });
+        
         setNewMessage('');
       } catch (error) {
         console.error('[ConversationScreen] Erreur lors de l\'envoi du message:', error);

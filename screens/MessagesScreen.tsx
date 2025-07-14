@@ -10,6 +10,7 @@ import SearchBar from '../components/SearchBar';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import ConversationService, { Conversation } from '../services/ConversationService';
+import { useUnreadConversations } from '../contexts/UnreadConversationsContext';
 
 type MessagesStackParamList = {
   MessagesMain: undefined;
@@ -65,16 +66,23 @@ export default function MessagesScreen() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const navigation = useNavigation<MessagesScreenNavigationProp>();
+  const { setUnreadCount } = useUnreadConversations();
 
   const loadConversations = async () => {
     try {
       setLoading(true);
       const conversationsData = await ConversationService.getConversations();
-      console.log('[MessagesScreen] Conversations chargées:', conversationsData);
+      // Log de debug pour chaque conversation
+      conversationsData.forEach(c => {
+        console.log(`[DEBUG] Conversation ${c.id} - unreadCount:`, c.unreadCount, '- lastMessage:', c.lastMessage, '- name:', c.name);
+      });
       setConversations(conversationsData);
+      // Met à jour le nombre de conversations non lues
+      const unread = conversationsData.filter(c => c.unreadCount > 0).length;
+      setUnreadCount(unread);
     } catch (error) {
       console.error('[MessagesScreen] Erreur lors du chargement des conversations:', error);
-      // En cas d'erreur, utiliser les données mockées
+      setUnreadCount(0); // fallback
       setConversations(MOCK_CONVERSATIONS);
     } finally {
       setLoading(false);
@@ -92,6 +100,12 @@ export default function MessagesScreen() {
       loadConversations();
     }, [])
   );
+
+  // Mettre à jour les conversations quand on reçoit un nouveau message
+  useEffect(() => {
+    // TODO: Écouter les événements WebSocket pour mettre à jour les pastilles en temps réel
+    // Pour l'instant, on recharge les conversations quand on revient sur l'écran
+  }, []);
 
   if (isGuest) {
     return (
