@@ -213,6 +213,26 @@ class ProductService {
   async getFavoriteStatus(productId: number): Promise<{ isFavorite: boolean; favoriteCount: number }> {
     return ApiService.get(`${this.baseUrl}/${productId}/favorite`, true);
   }
+
+  // Récupérer le nombre de favoris pour une liste d'IDs de produits
+  async getFavoriteCounts(productIds: number[]): Promise<{ [productId: number]: number }> {
+    return ApiService.post(`${this.baseUrl}/favorite-counts`, productIds, false);
+  }
+
+  // Récupérer tous les produits via le endpoint cacheable
+  async getProductsCacheable(filters: ProductFilters = {}): Promise<{
+    content: Product[];
+    totalElements: number;
+    totalPages: number;
+    currentPage: number;
+    size: number;
+  }> {
+    const queryParams = new URLSearchParams();
+    if (filters.page) queryParams.append('page', filters.page.toString());
+    if (filters.pageSize) queryParams.append('pageSize', filters.pageSize.toString());
+    const url = `${this.baseUrl}/cacheable?${queryParams.toString()}`;
+    return ApiService.get(url, false);
+  }
 }
 
 export default new ProductService(); 

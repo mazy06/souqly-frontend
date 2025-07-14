@@ -58,7 +58,7 @@ const MOCK_CONVERSATIONS: Conversation[] = [
 ];
 
 export default function MessagesScreen() {
-  const { isGuest, logout } = useAuth();
+  const { isGuest, logout, user } = useAuth();
   const { colors, isDark } = useTheme();
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -142,25 +142,40 @@ export default function MessagesScreen() {
         </View>
       ) : (
         <FlatList
-          data={conversations.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || c.lastMessage.toLowerCase().includes(search.toLowerCase()))}
+          data={conversations.filter(c => {
+            // Recherche sur les deux noms possibles
+            const otherName = user && c.sellerId?.toString() === user.id?.toString()
+              ? c.buyerName || ''
+              : c.sellerName || c.name || '';
+            return (
+              otherName.toLowerCase().includes(search.toLowerCase()) ||
+              c.lastMessage.toLowerCase().includes(search.toLowerCase())
+            );
+          })}
           keyExtractor={item => item.id}
-          renderItem={({ item }) => (
-            <ConversationItem
-              avatarUrl={item.avatarUrl}
-              name={item.name}
-              lastMessage={item.lastMessage}
-              time={item.time}
-              unreadCount={item.unreadCount}
-              onPress={() => {
-                navigation.navigate('Conversation', {
-                  conversationId: item.id,
-                  name: item.name,
-                  avatarUrl: item.avatarUrl,
-                  productId: item.productId,
-                });
-              }}
-            />
-          )}
+          renderItem={({ item }) => {
+            // Déterminer le nom à afficher
+            const otherName = user && item.sellerId?.toString() === user.id?.toString()
+              ? item.buyerName || 'Acheteur'
+              : item.sellerName || item.name || 'Vendeur';
+            return (
+              <ConversationItem
+                avatarUrl={item.avatarUrl}
+                name={otherName}
+                lastMessage={item.lastMessage}
+                time={item.time}
+                unreadCount={item.unreadCount}
+                onPress={() => {
+                  navigation.navigate('Conversation', {
+                    conversationId: item.id,
+                    name: otherName,
+                    avatarUrl: item.avatarUrl,
+                    productId: item.productId,
+                  });
+                }}
+              />
+            );
+          }}
           contentContainerStyle={{ paddingBottom: 24, marginTop: 12 }}
           style={{ flex: 1, marginHorizontal: 8 }}
           refreshControl={

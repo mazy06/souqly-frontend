@@ -7,6 +7,7 @@ export interface Message {
   isFromMe: boolean;
   productId?: number;
   offerPrice?: number;
+  sender?: string;
 }
 
 export interface Conversation {
@@ -18,6 +19,8 @@ export interface Conversation {
   unreadCount: number;
   productId?: number;
   sellerId: number;
+  buyerName?: string;
+  sellerName?: string;
 }
 
 export interface CreateConversationRequest {

@@ -15,7 +15,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import ConversationService, { Message } from '../services/ConversationService';
+import { useAuth } from '../contexts/AuthContext';
+import ConversationService, { Message, Conversation } from '../services/ConversationService';
 import ConversationProductCard from '../components/ConversationProductCard';
 import ProductService, { Product } from '../services/ProductService';
 import OfferMessage from '../components/OfferMessage';
@@ -32,10 +33,13 @@ export default function ConversationScreen() {
   const route = useRoute();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [product, setProduct] = useState<Product | null>(null);
+  const [conversation, setConversation] = useState<Conversation | null>(null);
+  const [otherUserName, setOtherUserName] = useState<string>('');
 
   const params = route.params as ConversationRouteParams;
 
@@ -43,14 +47,38 @@ export default function ConversationScreen() {
     const loadConversationData = async () => {
       try {
         setLoading(true);
-        
-        // Charger les messages de la conversation
+
+        // Charger la conversation complète
+        if (params?.conversationId) {
+          const conv = await ConversationService.getConversation(params.conversationId);
+          setConversation(conv);
+
+          // Déterminer l'autre participant avec les nouveaux champs
+          let otherName = '';
+          if (user && conv) {
+            if (user.id?.toString() === conv.sellerId?.toString()) {
+              // Je suis vendeur, l'autre est l'acheteur
+              otherName = conv.buyerName || 'Acheteur';
+            } else {
+              // Je suis acheteur, l'autre est le vendeur
+              otherName = conv.sellerName || conv.name || 'Vendeur';
+            }
+          }
+          setOtherUserName(otherName);
+        }
+
+        // Charger les messages
         if (params?.conversationId) {
           const conversationMessages = await ConversationService.getMessages(params.conversationId);
-          setMessages(conversationMessages);
+          // Mapper les messages pour isFromMe
+          const mapped = conversationMessages.map(msg => ({
+            ...msg,
+            isFromMe: !!(user && (msg.sender === user.email || msg.sender === user.id)),
+          }));
+          setMessages(mapped);
         }
-        
-        // Charger les informations du produit si disponible
+
+        // Charger le produit
         if (params?.productId) {
           try {
             const productData = await ProductService.getProduct(params.productId);
@@ -59,7 +87,6 @@ export default function ConversationScreen() {
             console.error('[ConversationScreen] Erreur lors du chargement du produit:', error);
           }
         }
-        
       } catch (error) {
         console.error('[ConversationScreen] Erreur lors du chargement de la conversation:', error);
         Alert.alert('Erreur', 'Impossible de charger la conversation');
@@ -67,9 +94,9 @@ export default function ConversationScreen() {
         setLoading(false);
       }
     };
-    
+
     loadConversationData();
-  }, [params?.conversationId, params?.productId]);
+  }, [params?.conversationId, params?.productId, user]);
 
   const sendMessage = async () => {
     if (newMessage.trim() && params?.conversationId) {
@@ -79,8 +106,10 @@ export default function ConversationScreen() {
           text: newMessage.trim(),
           productId: params.productId,
         });
-        
-        setMessages(prev => [...prev, message]);
+        setMessages(prev => [...prev, {
+          ...message,
+          isFromMe: true,
+        }]);
         setNewMessage('');
       } catch (error) {
         console.error('[ConversationScreen] Erreur lors de l\'envoi du message:', error);
@@ -141,17 +170,10 @@ export default function ConversationScreen() {
 
   const renderProductCard = () => {
     if (!product) return null;
-    
     return (
       <View style={styles.productCardContainer}>
-        <Text style={[styles.productCardTitle, { color: colors.text }]}>
-          Article en discussion
-        </Text>
-        <ConversationProductCard
-          product={product}
-          compact={true}
-          showPrice={true}
-        />
+        <Text style={[styles.productCardTitle, { color: colors.text }]}>Article en discussion</Text>
+        <ConversationProductCard product={product} compact={true} showPrice={true} />
       </View>
     );
   };
@@ -159,34 +181,24 @@ export default function ConversationScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top','left','right','bottom']}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
+      <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}> 
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        
         <View style={styles.headerInfo}>
           <Text style={[styles.headerName, { color: colors.text }]} numberOfLines={1}>
-            {params?.name || 'Conversation'}
+            {otherUserName || 'Conversation'}
           </Text>
-          <Text style={[styles.headerStatus, { color: colors.tabIconDefault }]}>
-            En ligne
-          </Text>
+          <Text style={[styles.headerStatus, { color: colors.tabIconDefault }]}>En ligne</Text>
         </View>
-        
         <TouchableOpacity style={styles.moreButton}>
           <Ionicons name="ellipsis-vertical" size={20} color={colors.text} />
         </TouchableOpacity>
       </View>
-
       {/* Messages */}
       {loading ? (
         <View style={styles.loadingContainer}>
-          <Text style={[styles.loadingText, { color: colors.tabIconDefault }]}>
-            Chargement...
-          </Text>
+          <Text style={[styles.loadingText, { color: colors.tabIconDefault }]}>Chargement...</Text>
         </View>
       ) : (
         <FlatList
@@ -199,7 +211,6 @@ export default function ConversationScreen() {
           ListHeaderComponent={renderProductCard}
         />
       )}
-
       {/* Input */}
       <View style={{ flex: 1, justifyContent: 'flex-end' }}>
         <KeyboardAvoidingView
@@ -218,17 +229,10 @@ export default function ConversationScreen() {
             />
             <TouchableOpacity 
               onPress={sendMessage}
-              style={[
-                styles.sendButton,
-                { backgroundColor: colors.card }
-              ]}
+              style={[styles.sendButton, { backgroundColor: colors.card }]}
               disabled={!newMessage.trim()}
             >
-              <Ionicons 
-                name="send" 
-                size={22} 
-                color={colors.primary} 
-              />
+              <Ionicons name="send" size={22} color={colors.primary} />
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>

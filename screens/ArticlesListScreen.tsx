@@ -32,7 +32,7 @@ function FavoritesScreen() {
 }
 
 export default function ArticlesListScreen() {
-  console.log('[DEBUG] ArticlesListScreen rendu');
+  console.log('[ArticlesListScreen] rendu');
   const navigation = useNavigation<StackNavigationProp<ArticlesListStackParamList>>();
   const route = useRoute();
   const { logout, isGuest, isAuthenticated } = useAuth();
@@ -48,9 +48,9 @@ export default function ArticlesListScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [imageUrls, setImageUrls] = useState<{[key: number]: string}>({});
+  const [favoriteCounts, setFavoriteCounts] = useState<{ [productId: number]: number }>({});
 
   const loadProducts = async (page: number = 0, append: boolean = false) => {
-    console.log('[DEBUG] loadProducts appelée avec page:', page, 'append:', append);
     try {
       if (append) {
         setLoadingMore(true);
@@ -58,42 +58,48 @@ export default function ArticlesListScreen() {
         setLoading(true);
       }
       
-      console.log('[DEBUG] Appel à ProductService.getProducts');
-      const response = await ProductService.getProducts({
+      const response = await ProductService.getProductsCacheable({
         page,
-        pageSize: 10,
-        sortBy: 'createdAt',
-        sortOrder: 'desc'
+        pageSize: 10
       });
 
       const newProducts = response.content || [];
-      
       // Charger les URLs des images pour les nouveaux produits
       const urls: {[key: number]: string} = {};
       for (const product of newProducts) {
         try {
-          const imageUrl = await ProductService.getProductImageUrl(product);
-          if (imageUrl) {
-            urls[product.id] = imageUrl;
+          // On prend la première image si dispo
+          if (product.images && product.images.length > 0) {
+            urls[product.id] = ProductService.getImageUrl(product.images[0].id);
           }
         } catch (error) {
           // Erreur silencieuse pour le chargement d'image
         }
       }
-      
+
+      // Récupérer les counts de favoris pour cette page
+      const ids = newProducts.map(p => p.id);
+      let counts: { [productId: number]: number } = {};
+      if (ids.length > 0) {
+        try {
+          counts = await ProductService.getFavoriteCounts(ids);
+        } catch (e) {
+          counts = {};
+        }
+      }
       if (append) {
         setProducts(prev => [...prev, ...newProducts]);
         setImageUrls(prev => ({ ...prev, ...urls }));
+        setFavoriteCounts(prev => ({ ...prev, ...counts }));
       } else {
         setProducts(newProducts);
         setImageUrls(urls);
+        setFavoriteCounts(counts);
       }
-      
       setCurrentPage(page);
       setHasMore((response.currentPage || 0) < (response.totalPages || 1) - 1);
       setError(null);
     } catch (err) {
-      console.error('[ArticlesListScreen] Erreur lors du chargement des produits:', err);
       setError('Impossible de charger les produits. Veuillez réessayer plus tard.');
     } finally {
       setLoading(false);
@@ -131,17 +137,31 @@ export default function ArticlesListScreen() {
     navigation.navigate('ProductDetail', { productId: productId.toString() });
   };
 
+  // Rafraîchir le count de favoris pour un seul produit
+  const refreshFavoriteCount = async (productId: number) => {
+    try {
+      const counts = await ProductService.getFavoriteCounts([productId]);
+      setFavoriteCounts(prev => ({ ...prev, ...counts }));
+    } catch (e) {
+      // Optionnel : gestion d'erreur
+    }
+  };
+
   const handleFavoritePress = async (productId: number) => {
     try {
       const result = await toggleFavorite(productId);
-      // Mettre à jour l'état du produit dans la liste
-      setProducts(prev => 
-        prev.map(product => 
-          product.id === productId 
-            ? { ...product, favoriteCount: result.favoriteCount }
-            : product
-        )
-      );
+
+      // Mise à jour optimiste du compteur
+      setFavoriteCounts(prev => {
+        const current = prev[productId] || 0;
+        return {
+          ...prev,
+          [productId]: result.isFavorite ? current + 1 : Math.max(0, current - 1)
+        };
+      });
+
+      // Rafraîchir le count global pour ce produit (pour la cohérence)
+      await refreshFavoriteCount(productId);
     } catch (error) {
       console.error('Erreur lors du toggle des favoris:', error);
       Alert.alert('Erreur', 'Impossible de modifier les favoris pour le moment');
@@ -256,10 +276,11 @@ export default function ArticlesListScreen() {
       condition={item.condition}
       price={item.price.toString()}
       priceWithFees={item.priceWithFees?.toString()}
-      image={item.images && item.images.length > 0 ? getImageUrl(item.images[0].id) : 'https://via.placeholder.com/120'}
-      likes={item.favoriteCount}
+      image={imageUrls[item.id] || (item.images && item.images.length > 0 ? getImageUrl(item.images[0].id) : 'https://via.placeholder.com/120')}
+      likes={favoriteCounts[item.id] || 0}
       isFavorite={isFavorite(item.id)}
       onPress={() => handleProductPress(item.id)}
+      onFavoritePress={() => handleFavoritePress(item.id)}
     />
   );
 
@@ -325,8 +346,6 @@ export default function ArticlesListScreen() {
     );
   }
 
-  // Avant le return principal
-  console.log('[DEBUG] products à afficher:', products);
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top','left','right']}>
       <FlatList
