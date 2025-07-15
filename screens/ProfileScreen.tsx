@@ -11,6 +11,8 @@ import GuestMessage from '../components/GuestMessage';
 import SectionHeader from '../components/SectionHeader';
 import ApiService from '../services/ApiService';
 import ProductService from '../services/ProductService';
+import WalletCard from '../components/WalletCard';
+import WalletService from '../services/WalletService';
 
 // Définition du type du stack profil
 export type ProfileStackParamList = {
@@ -19,24 +21,30 @@ export type ProfileStackParamList = {
   MyProducts: undefined;
   MyProductDetail: { productId: string };
   EditProduct: { productId: string };
+  Wallet: undefined;
+  EditProfile: undefined;
+  MyAnnouncements: undefined;
+  Transactions: undefined;
 };
-
-type TabType = 'products' | 'theme';
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
   const { user, isGuest, logout } = useAuth();
   const { colors, themeMode, isDark } = useTheme();
   const [themeModalVisible, setThemeModalVisible] = useState(false);
+  const [settingsExpanded, setSettingsExpanded] = useState(false);
+  const [securityExpanded, setSecurityExpanded] = useState(false);
+  const [helpExpanded, setHelpExpanded] = useState(false);
   const [userStats, setUserStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<TabType>('products');
   const [userProducts, setUserProducts] = useState<any[]>([]);
+  const [walletBalance, setWalletBalance] = useState(0);
 
   useEffect(() => {
     if (user && !isGuest) {
       loadUserStats();
       loadUserProducts();
+      loadWalletBalance();
     } else {
       setLoading(false);
     }
@@ -69,6 +77,19 @@ export default function ProfileScreen() {
     } catch (error) {
       console.error('Erreur lors du chargement des produits:', error);
       setUserProducts([]);
+    }
+  };
+
+  const loadWalletBalance = async () => {
+    try {
+      if (user?.id) {
+        const balanceData = await WalletService.getBalance(user.id);
+        setWalletBalance(balanceData.balance);
+      }
+    } catch (error) {
+      console.log('⚠️ Utilisation du solde par défaut pour la démo');
+      // Solde par défaut pour la démo
+      setWalletBalance(200.50);
     }
   };
 
@@ -112,76 +133,6 @@ export default function ProfileScreen() {
     });
   };
 
-  const renderProductItem = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={styles.productItem}
-      onPress={() => {
-        navigation.navigate('MyProductDetail', { productId: item.id.toString() });
-      }}
-    >
-      <Image
-        source={
-          item.images && item.images.length > 0
-            ? { uri: ProductService.getProductImageUrl(item) }
-            : require('../assets/images/icon.png')
-        }
-        style={styles.productImage}
-      />
-      <View style={styles.productInfo}>
-        <Text style={[styles.productTitle, { color: colors.text }]} numberOfLines={2}>
-          {item.title}
-        </Text>
-        <Text style={[styles.productPrice, { color: colors.primary }]}>
-          {item.price} €
-        </Text>
-        <Text style={[styles.productDate, { color: colors.textSecondary }]}>
-          {formatDate(item.createdAt)}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
-
-  const renderTabContent = () => {
-    if (activeTab === 'products') {
-      return (
-        <View style={styles.tabContentContainer}>
-          <FlatList
-            data={userProducts}
-            renderItem={renderProductItem}
-            keyExtractor={(item) => item.id.toString()}
-            showsVerticalScrollIndicator={false}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Ionicons name="bag-outline" size={48} color={colors.textSecondary} />
-                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                  Aucun produit publié
-                </Text>
-              </View>
-            }
-          />
-        </View>
-      );
-    } else {
-      return (
-        <View style={styles.themeSection}>
-          <TouchableOpacity
-            style={[styles.menuItem, { backgroundColor: colors.card, borderColor: colors.border }]}
-            onPress={() => setThemeModalVisible(true)}
-          >
-            <View style={styles.menuItemContent}>
-              <Ionicons name={getThemeIcon()} size={24} color={colors.text} style={styles.menuItemIcon} />
-              <View style={styles.menuItemTextContainer}>
-                <Text style={[styles.menuItemText, { color: colors.text }]}>Thème</Text>
-                <Text style={[styles.menuItemSubtext, { color: colors.text + '80' }]}>{getThemeLabel()}</Text>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.text + '60'} />
-          </TouchableOpacity>
-        </View>
-      );
-    }
-  };
-
   if (isGuest) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background, flex: 1 }]} edges={['top','left','right']}> 
@@ -218,17 +169,36 @@ export default function ProfileScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.logoutIcon}
-          onPress={handleLogout}
-        >
-          <Ionicons name="log-out-outline" size={24} color={colors.text} />
-        </TouchableOpacity>
+        <View style={styles.headerLeft} />
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={styles.themeIcon}
+            onPress={() => setThemeModalVisible(true)}
+          >
+            <Ionicons 
+              name={getThemeIcon()} 
+              size={24} 
+              color={colors.text} 
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.logoutIcon}
+            onPress={handleLogout}
+          >
+            <Ionicons name="log-out-outline" size={24} color={colors.text} />
+          </TouchableOpacity>
+        </View>
       </View>
+
+      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
 
       {/* Profile Info */}
       <View style={styles.profileSection}>
-        <View style={styles.profileHeader}>
+        <TouchableOpacity 
+          style={styles.profileHeader}
+          onPress={() => navigation.navigate('EditProfile')}
+          activeOpacity={0.7}
+        >
           <View style={[styles.profileImage, { backgroundColor: colors.primary }]}>
             <Text style={styles.profileImageText}>
               {user.name ? user.name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
@@ -259,7 +229,8 @@ export default function ProfileScreen() {
               </Text>
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
+      </View>
 
         {/* Stats */}
         <View style={styles.statsContainer}>
@@ -289,74 +260,302 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Role Badge */}
-        <View style={[styles.roleBadge, { backgroundColor: user.role === 'admin' ? '#008080' : colors.primary }]}>
-          <Text style={styles.roleText}>
-            {user.role === 'admin' ? 'Administrateur' : 'Utilisateur'}
+        {/* Role Badge - Only show for admin */}
+        {user.role === 'admin' && (
+          <View style={[styles.roleBadge, { backgroundColor: '#008080' }]}>
+            <Text style={styles.roleText}>
+              Administrateur
+            </Text>
+          </View>
+        )}
+
+      {/* Wallet Card */}
+      <WalletCard
+        balance={walletBalance}
+        onPress={() => navigation.navigate('Wallet')}
+      />
+
+      {/* Mes annonces - Design ultra simple */}
+      <View style={styles.announcementsSection}>
+        <TouchableOpacity
+          style={styles.announcementsCard}
+          onPress={() => navigation.navigate('MyAnnouncements')}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="list-outline" size={24} color={colors.text} style={styles.announcementsIcon} />
+          <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+            Mes annonces ({userProducts.length})
           </Text>
-        </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
       </View>
 
-      {/* Admin Section */}
-      {user.role === 'admin' && (
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Administration</Text>
-          
+      {/* Transactions - Design ultra simple */}
+      <View style={styles.announcementsSection}>
+        <TouchableOpacity
+          style={styles.announcementsCard}
+          onPress={() => navigation.navigate('Transactions')}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="swap-horizontal-outline" size={24} color={colors.text} style={styles.announcementsIcon} />
+          <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+            Transactions
+          </Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Paramètres - Design ultra simple avec accordéon */}
+      <View style={styles.announcementsSection}>
+        <TouchableOpacity
+          style={styles.announcementsCard}
+          onPress={() => setSettingsExpanded(!settingsExpanded)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="settings-outline" size={24} color={colors.text} style={styles.announcementsIcon} />
+          <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+            Paramètres
+          </Text>
+                      <Ionicons 
+              name={settingsExpanded ? "chevron-down" : "chevron-forward"} 
+              size={20} 
+              color={colors.textSecondary} 
+            />
+        </TouchableOpacity>
+        
+        {/* Sous-éléments déroulés */}
+        {settingsExpanded && (
+          <View style={styles.expandedContent}>
+            <TouchableOpacity 
+              style={styles.subMenuItem} 
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('EditProfile')}
+            >
+              <Ionicons name="person-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+              <Text style={[styles.subMenuText, { color: colors.text }]}>
+                Profil
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.subMenuItem} 
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('EmailSettings')}
+            >
+              <Ionicons name="mail-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+              <Text style={[styles.subMenuText, { color: colors.text }]}>
+                Email
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.subMenuItem} 
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('PaymentMethods')}
+            >
+              <Ionicons name="card-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+              <Text style={[styles.subMenuText, { color: colors.text }]}>
+                Moyens de paiement
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.subMenuItem} 
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('NotificationSettings')}
+            >
+              <Ionicons name="notifications-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+              <Text style={[styles.subMenuText, { color: colors.text }]}>
+                Notifications
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.subMenuItem} 
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('BulkDiscount')}
+            >
+              <Ionicons name="pricetag-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+              <Text style={[styles.subMenuText, { color: colors.text }]}>
+                Réductions sur les lots
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.subMenuItem} activeOpacity={0.7}>
+              <Ionicons name="shield-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+              <Text style={[styles.subMenuText, { color: colors.text }]}>
+                Confidentialité
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.subMenuItem} activeOpacity={0.7}>
+              <Ionicons name="help-circle-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+              <Text style={[styles.subMenuText, { color: colors.text }]}>
+                Aide
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
+              {/* Connexion et Sécurité - Menu déroulant */}
+        <View style={styles.announcementsSection}>
           <TouchableOpacity
-            style={[styles.menuItem, { backgroundColor: colors.card, borderColor: colors.border }]}
-            onPress={() => navigation.navigate('AdminCategories')}
+            style={styles.announcementsCard}
+            onPress={() => setSecurityExpanded(!securityExpanded)}
+            activeOpacity={0.7}
           >
-            <View style={styles.menuItemContent}>
-              <Ionicons name="settings-outline" size={24} color={colors.text} style={styles.menuItemIcon} />
-              <View style={styles.menuItemTextContainer}>
-                <Text style={[styles.menuItemText, { color: colors.text }]}>Gestion des catégories</Text>
-                <Text style={[styles.menuItemSubtext, { color: colors.text + '80' }]}>Administrer les catégories</Text>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.text + '60'} />
+            <Ionicons name="shield-outline" size={24} color={colors.text} style={styles.announcementsIcon} />
+            <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+              Connexion et Sécurité
+            </Text>
+            <Ionicons 
+              name={securityExpanded ? "chevron-down" : "chevron-forward"} 
+              size={20} 
+              color={colors.textSecondary} 
+            />
           </TouchableOpacity>
+          
+          {/* Sous-éléments déroulés */}
+          {securityExpanded && (
+            <View style={styles.expandedContent}>
+              <TouchableOpacity style={styles.subMenuItem}>
+                <Ionicons name="shield-checkmark-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+                <Text style={[styles.subMenuText, { color: colors.text }]}>
+                  Sécurité du compte
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.subMenuItem}>
+                <Ionicons name="key-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+                <Text style={[styles.subMenuText, { color: colors.text }]}>
+                  Mot de passe
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.subMenuItem}>
+                <Ionicons name="call-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+                <Text style={[styles.subMenuText, { color: colors.text }]}>
+                  Numéro de téléphone
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.subMenuItem}>
+                <Ionicons name="lock-closed-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+                <Text style={[styles.subMenuText, { color: colors.text }]}>
+                  Connexion en 2 étapes
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.subMenuItem}>
+                <Ionicons name="scan-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+                <View style={styles.menuItemWithBadge}>
+                  <Text style={[styles.subMenuText, { color: colors.text }]}>
+                    Face ID
+                  </Text>
+                  <View style={styles.newBadge}>
+                    <Text style={styles.newBadgeText}>Nouveau</Text>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.subMenuItem}>
+                <Ionicons name="phone-portrait-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+                <Text style={[styles.subMenuText, { color: colors.text }]}>
+                  Appareils connectés
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
-      )}
 
-      {/* Tabs */}
-      <View style={styles.tabsContainer}>
-        <TouchableOpacity
-          style={[
-            styles.tabButton,
-            activeTab === 'products' && { borderBottomColor: colors.primary, borderBottomWidth: 2 }
-          ]}
-          onPress={() => setActiveTab('products')}
-        >
-          <Text style={[
-            styles.tabText,
-            { color: activeTab === 'products' ? colors.primary : colors.textSecondary }
-          ]}>
-            Mes produits ({userProducts.length})
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.tabButton,
-            activeTab === 'theme' && { borderBottomColor: colors.primary, borderBottomWidth: 2 }
-          ]}
-          onPress={() => setActiveTab('theme')}
-        >
-          <Text style={[
-            styles.tabText,
-            { color: activeTab === 'theme' ? colors.primary : colors.textSecondary }
-          ]}>
-            Thème système
-          </Text>
-        </TouchableOpacity>
-      </View>
+        {/* Aide - Menu déroulant */}
+        <View style={styles.announcementsSection}>
+          <TouchableOpacity
+            style={styles.announcementsCard}
+            onPress={() => setHelpExpanded(!helpExpanded)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="help-circle-outline" size={24} color={colors.text} style={styles.announcementsIcon} />
+            <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+              Aide
+            </Text>
+            <Ionicons 
+              name={helpExpanded ? "chevron-down" : "chevron-forward"} 
+              size={20} 
+              color={colors.textSecondary} 
+            />
+          </TouchableOpacity>
+          
+          {/* Sous-éléments déroulés */}
+          {helpExpanded && (
+            <View style={styles.expandedContent}>
+              <TouchableOpacity style={styles.subMenuItem}>
+                <Ionicons name="sparkles-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+                <Text style={[styles.subMenuText, { color: colors.text }]}>
+                  Nouveautés
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.subMenuItem}>
+                <Ionicons name="document-text-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+                <Text style={[styles.subMenuText, { color: colors.text }]}>
+                  Informations légales
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.subMenuItem}>
+                <Ionicons name="information-circle-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+                <Text style={[styles.subMenuText, { color: colors.text }]}>
+                  Centre d'aide
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
 
-      {/* Tab Content */}
-      {renderTabContent()}
+        {/* Admin Section */}
+        {user.role === 'admin' && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Administration</Text>
+            
+            <TouchableOpacity
+              style={[styles.menuItem, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => navigation.navigate('AdminCategories')}
+            >
+              <View style={styles.menuItemContent}>
+                <Ionicons name="settings-outline" size={24} color={colors.text} style={styles.menuItemIcon} />
+                <View style={styles.menuItemTextContainer}>
+                  <Text style={[styles.menuItemText, { color: colors.text }]}>Gestion des catégories</Text>
+                  <Text style={[styles.menuItemSubtext, { color: colors.text + '80' }]}>Administrer les catégories</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.text + '60'} />
+            </TouchableOpacity>
+          </View>
+        )}
 
       <ThemeToggle 
         visible={themeModalVisible} 
         onClose={() => setThemeModalVisible(false)} 
       />
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -368,11 +567,22 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
+  },
+  headerLeft: {
+    width: 50,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  themeIcon: {
+    paddingHorizontal: 8,
+    marginRight: 8,
   },
   headerTitle: {
     fontSize: 18,
@@ -527,80 +737,69 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 16,
   },
-  tabsContainer: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-    marginHorizontal: 16,
+
+  announcementsSection: {
+    padding: 8,
   },
-  tabButton: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  tabText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  tabContent: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-  },
-  productItem: {
-    backgroundColor: 'white',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+  announcementsCard: {
+    padding: 8,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  productImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
+  announcementsIcon: {
     marginRight: 12,
   },
-  productInfo: {
+  announcementsTitle: {
+    fontSize: 20,
+    fontWeight: '500',
     flex: 1,
   },
-  productTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
+  expandedContent: {
+    paddingLeft: 44,
+    paddingTop: 8,
+    paddingRight: 16,
   },
-  productPrice: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  productDate: {
-    fontSize: 12,
-  },
-  emptyContainer: {
+  subMenuItem: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
-  },
-  emptyText: {
-    fontSize: 16,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  themeSection: {
-    padding: 16,
-  },
-  tabContentContainer: {
-    flex: 1,
+    justifyContent: 'space-between',
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    paddingTop: 16,
+    marginBottom: 4,
+    borderRadius: 8,
+  },
+  subMenuIcon: {
+    marginRight: 12,
+  },
+  subMenuText: {
+    fontSize: 16,
+    fontWeight: '500',
+    flex: 1,
+  },
+  subMenuArrow: {
+    marginLeft: 8,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  menuItemWithBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  newBadge: {
+    backgroundColor: '#FF6B35',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginLeft: 8,
+  },
+  newBadgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: '600',
   },
 }); 

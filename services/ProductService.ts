@@ -243,6 +243,15 @@ class ProductService {
     const url = `${this.baseUrl}/cacheable?${queryParams.toString()}`;
     return ApiService.get(url, false);
   }
+
+  // Incrémenter le compteur de vues d'un produit
+  async incrementViewCount(productId: number): Promise<void> {
+    try {
+      await ApiService.post(`${this.baseUrl}/${productId}/increment-view`, {}, true);
+    } catch (error) {
+      console.error('[ProductService] Erreur lors de l\'incrémentation des vues:', error);
+    }
+  }
 }
 
 export default new ProductService(); 

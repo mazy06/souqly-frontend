@@ -22,7 +22,7 @@ export default function ProductHeader({ title, isFavorite, favoritesCount = 0, o
         if (navigation.canGoBack()) {
           navigation.goBack();
         } else {
-          navigation.navigate('Accueil'); // ou 'Home' selon le nom de ta route principale
+          (navigation as any).navigate('ArticlesList'); // route principale Home
         }
       }}>
         <Ionicons name="arrow-back" size={24} color="#181A20" />

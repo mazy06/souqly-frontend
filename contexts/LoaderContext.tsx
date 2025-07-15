@@ -17,11 +17,11 @@ export function LoaderProvider({ children }: { children: ReactNode }) {
   return (
     <LoaderContext.Provider value={{ showLoader, hideLoader }}>
       {children}
-      {loading && (
+      {/* {loading && (
         <View style={styles.overlay}>
           <ActivityIndicator size="large" color="#00BFA6" />
         </View>
-      )}
+      )} */}
     </LoaderContext.Provider>
   );
 }

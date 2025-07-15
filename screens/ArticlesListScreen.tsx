@@ -322,13 +322,13 @@ export default function ArticlesListScreen() {
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <View key={i} style={styles.skeletonCard}>
                 <View style={styles.skeletonImageContainer}>
-                  <Skeleton width="100%" height={160} borderRadius={16} />
+                  <Skeleton containerStyle={{ width: '100%', height: 160, borderRadius: 16 }} />
                 </View>
                 <View style={styles.skeletonContent}>
-                  <Skeleton width="70%" height={14} />
-                  <Skeleton width="90%" height={16} />
-                  <Skeleton width="60%" height={12} />
-                  <Skeleton width="50%" height={14} />
+                  <Skeleton containerStyle={{ width: '70%', height: 14 }} />
+                  <Skeleton containerStyle={{ width: '90%', height: 16 }} />
+                  <Skeleton containerStyle={{ width: '60%', height: 12 }} />
+                  <Skeleton containerStyle={{ width: '50%', height: 14 }} />
                 </View>
               </View>
             ))}

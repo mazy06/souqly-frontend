@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import ProductService from '../services/ProductService';
 
@@ -8,8 +8,9 @@ export function useFavorites() {
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
   const [favoriteCounts, setFavoriteCounts] = useState<{ [productId: number]: number }>({});
   const [loading, setLoading] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  const loadFavorites = async () => {
+  const loadFavorites = useCallback(async () => {
     if (!isAuthenticated || isGuest) {
       setFavoriteIds(new Set());
       setFavoriteCounts({});
@@ -31,18 +32,19 @@ export function useFavorites() {
       setFavoriteCounts(counts);
     } catch (error) {
       console.error('[useFavorites] Erreur lors du chargement des favoris:', error);
+      // En cas d'erreur, on initialise avec des valeurs vides
       setFavoriteIds(new Set());
       setFavoriteCounts({});
     } finally {
       setLoading(false);
     }
-  };
+  }, [isAuthenticated, isGuest]);
 
-  const isFavorite = (productId: number): boolean => {
+  const isFavorite = useCallback((productId: number): boolean => {
     return favoriteIds.has(productId);
-  };
+  }, [favoriteIds]);
 
-  const toggleFavorite = async (productId: number) => {
+  const toggleFavorite = useCallback(async (productId: number) => {
     try {
       const result = await ProductService.toggleFavorite(productId);
 
@@ -68,12 +70,22 @@ export function useFavorites() {
       console.error('[useFavorites] Erreur lors du toggle des favoris:', error);
       throw error;
     }
-  };
+  }, []);
 
+  // Chargement initial uniquement
   useEffect(() => {
-    loadFavorites();
-  }, [isAuthenticated, isGuest]);
+    if (!isInitialized && isAuthenticated && !isGuest) {
+      console.log('[useFavorites] Chargement initial des favoris');
+      setIsInitialized(true);
+      loadFavorites();
+    } else if (!isAuthenticated || isGuest) {
+      setFavoriteIds(new Set());
+      setFavoriteCounts({});
+      setIsInitialized(false);
+    }
+  }, [isAuthenticated, isGuest, isInitialized, loadFavorites]);
 
+  // Debug logging
   useEffect(() => {
     if (user) {
       console.log('[useFavorites] user:', user.email || user.id, 'favoriteIds:', Array.from(favoriteIds));

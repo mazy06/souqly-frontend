@@ -3,7 +3,7 @@ import { View, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 
-export default function SearchBar({ value, onChangeText, onPressCamera, onSubmit, placeholder }: { value: string; onChangeText: (t: string) => void; onPressCamera?: () => void; onSubmit?: () => void; placeholder?: string }) {
+export default function SearchBar({ value, onChangeText, onPressCamera, onSubmit, onClear, placeholder }: { value: string; onChangeText: (t: string) => void; onPressCamera?: () => void; onSubmit?: () => void; onClear?: () => void; placeholder?: string }) {
   const { colors } = useTheme();
   
   return (
@@ -17,6 +17,11 @@ export default function SearchBar({ value, onChangeText, onPressCamera, onSubmit
         onChangeText={onChangeText}
         onSubmitEditing={onSubmit}
       />
+      {value.length > 0 && onClear && (
+        <TouchableOpacity onPress={onClear} style={styles.clearButton}>
+          <Ionicons name="close-circle" size={20} color={colors.tabIconDefault} />
+        </TouchableOpacity>
+      )}
       {onPressCamera && (
         <TouchableOpacity onPress={onPressCamera} style={styles.heartButton}>
           <Ionicons name="camera-outline" size={22} color={colors.primary} />
@@ -44,6 +49,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   heartButton: {
+    marginLeft: 8,
+    padding: 4,
+  },
+  clearButton: {
     marginLeft: 8,
     padding: 4,
   },

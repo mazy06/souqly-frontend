@@ -14,6 +14,7 @@ import ProductSimilarCarousel from '../components/ProductSimilarCarousel';
 import ProductSimilarSection from '../components/ProductSimilarSection';
 import ProductLocation from '../components/ProductLocation';
 import ProductReportLinks from '../components/ProductReportLinks';
+import LoadingSpinner from '../components/Skeleton';
 import { useAuth } from '../contexts/AuthContext';
 import { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -53,6 +54,15 @@ export default function ProductDetailScreen() {
         // Charger le produit
         const productData = await ProductService.getProduct(parseInt(productId));
         setProduct(productData);
+        
+        // Incrémenter le compteur de vues seulement si l'utilisateur est connecté
+        if (isAuthenticated && !isGuest) {
+          try {
+            await ProductService.incrementViewCount(parseInt(productId));
+          } catch (error) {
+            console.log('Erreur lors de l\'incrémentation des vues:', error);
+          }
+        }
         
         // Charger les favoris seulement si l'utilisateur est connecté
         if (isAuthenticated || isGuest) {
@@ -168,7 +178,13 @@ export default function ProductDetailScreen() {
     fetchDistance();
   }, [product]);
 
-  if (loading) return <ActivityIndicator size="large" style={{ flex: 1 }} />;
+  if (loading) return (
+    <LoadingSpinner 
+      message="Chargement du produit..." 
+      containerStyle={styles.loadingContainer}
+      heightRatio={0.5} // Plus grand pour le chargement d'un produit détaillé
+    />
+  );
   if (!product) return null;
 
   const handleImagePress = () => {
@@ -499,5 +515,16 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '500',
     fontSize: 13,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#333',
   },
 }); 

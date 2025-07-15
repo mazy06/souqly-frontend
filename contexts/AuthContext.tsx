@@ -11,6 +11,7 @@ type AuthContextType = {
   login: () => void;
   logout: () => void;
   guest: () => void;
+  updateUser: (userData: AuthUser) => void;
   signInWithGoogle: () => Promise<AuthResult>;
   signInWithFacebook: () => Promise<AuthResult>;
   signInWithApple: () => Promise<AuthResult>;
@@ -168,6 +169,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return result;
   };
 
+  const updateUser = (userData: AuthUser) => {
+    setUser(userData);
+  };
+
   return (
     <AuthContext.Provider value={{ 
       isAuthenticated, 
@@ -177,6 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login, 
       logout, 
       guest,
+      updateUser,
       signInWithGoogle,
       signInWithFacebook,
       signInWithApple,

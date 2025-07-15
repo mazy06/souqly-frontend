@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import SearchBar from '../components/SearchBar';
+import EnhancedSearchBar from '../components/EnhancedSearchBar';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import CategoryService, { Category } from '../services/CategoryService';
 import { useTheme } from '../contexts/ThemeContext';
@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export type SearchStackParamList = {
   SearchMain: undefined;
   Category: { categoryKey: string; categoryLabel: string };
+  SearchResults: { query: string };
 };
 
 interface CategoryListItemProps {
@@ -85,16 +86,15 @@ export default function SearchScreen() {
   const handleSearchSubmit = async () => {
     if (search.trim()) {
       console.log('[SearchScreen] Recherche soumise:', search);
+      navigation.navigate('SearchResults', { query: search.trim() });
       setSearch(''); // Vider le champ de recherche
-      // Pour l'instant, on peut juste afficher un message ou naviguer
-      // TODO: Implémenter la navigation vers les résultats de recherche
     }
   };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}> 
       <View style={styles.header}>
-        <SearchBar 
+        <EnhancedSearchBar 
           value={search} 
           onChangeText={setSearch} 
           onSubmit={handleSearchSubmit}
