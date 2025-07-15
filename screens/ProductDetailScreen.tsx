@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, ScrollView, StyleSheet, ActivityIndicator, Platform, TouchableOpacity, Image, Alert, Text, Dimensions } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { navigationRef } from '../navigation/RootNavigation';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ProductService, { Product } from '../services/ProductService';
 import ConversationService from '../services/ConversationService';
@@ -26,7 +27,7 @@ type ProductDetailRouteProp = RouteProp<{ ProductDetail: { productId: string } }
 export default function ProductDetailScreen() {
   const route = useRoute<ProductDetailRouteProp>();
   const navigation = useNavigation();
-  const { isAuthenticated, isGuest } = useAuth();
+  const { isAuthenticated, isGuest, user } = useAuth();
   const productId = route.params?.productId;
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -369,6 +370,10 @@ export default function ProductDetailScreen() {
         {seller && (
           <ProductSellerCard
             seller={seller}
+            onPress={() => {
+              // @ts-ignore
+              navigation.navigate('ProfileDetail', { userId: seller.id });
+            }}
           />
         )}
 
@@ -411,6 +416,7 @@ export default function ProductDetailScreen() {
           sellerName={seller?.firstName || 'Vendeur'}
           productPrice={product.price}
           onSendOffer={handleSendOffer}
+          isOwnProduct={!!(isAuthenticated && user && product.seller && parseInt(user.id) === product.seller.id)}
         />
       </View>
     </View>

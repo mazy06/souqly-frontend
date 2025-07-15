@@ -198,6 +198,16 @@ class ProductService {
   }
 
   // Récupérer l'URL de la première image d'un produit
+  
+  // Récupérer les produits d'un vendeur spécifique
+  async getProductsBySeller(sellerId: number): Promise<Product[]> {
+    try {
+      return await ApiService.get(`${this.baseUrl}/seller/${sellerId}`, false);
+    } catch (error) {
+      console.error('[ProductService] Erreur lors de la récupération des produits du vendeur:', error);
+      return [];
+    }
+  }
   getProductImageUrl(product: Product): string | null {
     
     // Si les images sont déjà dans l'objet produit

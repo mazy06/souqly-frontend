@@ -9,6 +9,7 @@ interface ProductActionsProps {
   sellerName?: string;
   productPrice?: number;
   onSendOffer?: (offerData: { price: number; message: string }) => void;
+  isOwnProduct?: boolean;
 }
 
 const { height: screenHeight } = Dimensions.get('window');
@@ -19,7 +20,8 @@ export default function ProductActions({
   isDisabled, 
   sellerName = 'Vendeur',
   productPrice = 0,
-  onSendOffer 
+  onSendOffer,
+  isOwnProduct = false
 }: ProductActionsProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [offerPrice, setOfferPrice] = useState('');
@@ -92,20 +94,28 @@ export default function ProductActions({
         {!isExpanded ? (
           // Boutons normaux
           <View style={styles.actionsBar}>
-            <TouchableOpacity
-              style={[styles.offerBtn, isDisabled && styles.disabledBtn]}
-              onPress={handleOfferPress}
-              disabled={isDisabled}
-            >
-              <Text style={[styles.offerBtnText, isDisabled && styles.disabledText]}>Faire une offre</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.buyBtn, isDisabled && styles.disabledBtn]}
-              onPress={onBuy}
-              disabled={isDisabled}
-            >
-              <Text style={styles.buyBtnText}>Acheter</Text>
-            </TouchableOpacity>
+            {!isOwnProduct ? (
+              <>
+                <TouchableOpacity
+                  style={[styles.offerBtn, isDisabled && styles.disabledBtn]}
+                  onPress={handleOfferPress}
+                  disabled={isDisabled}
+                >
+                  <Text style={[styles.offerBtnText, isDisabled && styles.disabledText]}>Faire une offre</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.buyBtn, isDisabled && styles.disabledBtn]}
+                  onPress={onBuy}
+                  disabled={isDisabled}
+                >
+                  <Text style={styles.buyBtnText}>Acheter</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <View style={styles.ownProductMessage}>
+                <Text style={styles.ownProductText}>Votre annonce</Text>
+              </View>
+            )}
           </View>
         ) : (
           // Formulaire d'offre
@@ -292,5 +302,17 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  ownProductMessage: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+  },
+  ownProductText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+    fontStyle: 'italic',
   },
 }); 

@@ -57,7 +57,7 @@ export default function ProductInfoSection({
       {/* Description */}
       <View style={styles.descriptionSection}>
         <Text style={styles.descriptionTitle}>Description</Text>
-        <Text style={styles.descriptionText} numberOfLines={showFullDescription ? undefined : 3}>
+        <Text style={styles.descriptionText} numberOfLines={showFullDescription ? undefined : 13}>
           {description}
         </Text>
         {description.length > 100 && (

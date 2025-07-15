@@ -20,6 +20,7 @@ interface Seller {
 interface ProductSellerCardProps {
   seller: Seller;
   onFollow?: () => void;
+  onPress?: () => void;
 }
 
 // Mock reviews data (repris de SellerReviews)
@@ -44,7 +45,7 @@ function renderStars(rating: number) {
   return <View style={{ flexDirection: 'row', marginLeft: 6 }}>{stars}</View>;
 }
 
-export default function ProductSellerCard({ seller, onFollow }: ProductSellerCardProps) {
+export default function ProductSellerCard({ seller, onFollow, onPress }: ProductSellerCardProps) {
   const [showReviews, setShowReviews] = useState(false);
   const [page, setPage] = useState(1);
   const paginatedReviews = mockReviews.slice(0, page * PAGE_SIZE);
@@ -52,7 +53,7 @@ export default function ProductSellerCard({ seller, onFollow }: ProductSellerCar
 
   return (
     <View style={styles.card}>
-      <View style={styles.row}>
+      <TouchableOpacity style={styles.row} onPress={onPress} disabled={!onPress}>
         <Image
           source={seller.profilePicture ? { uri: seller.profilePicture } : require('../assets/images/icon.png')}
           style={styles.avatar}
@@ -90,7 +91,7 @@ export default function ProductSellerCard({ seller, onFollow }: ProductSellerCar
         <TouchableOpacity style={styles.followBtn} onPress={onFollow}>
           <Text style={styles.followBtnText}>{seller.isFollowing ? 'Suivi' : 'Suivre'}</Text>
         </TouchableOpacity>
-      </View>
+      </TouchableOpacity>
       {/* Liste des avis paginée, en dehors du bloc principal */}
       {showReviews && (
         <View style={{ marginTop: 12 }}>
