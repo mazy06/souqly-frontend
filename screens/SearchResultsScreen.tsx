@@ -1,186 +1,157 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  ActivityIndicator,
-  RefreshControl,
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import EnhancedSearchBar from '../components/EnhancedSearchBar';
+import { useFavorites } from '../hooks/useFavorites';
+import ProductService, { Product } from '../services/ProductService';
 import ProductCard from '../components/ProductCard';
-import SearchService, { SearchFilters, SearchResult } from '../services/SearchService';
-import ProductService from '../services/ProductService';
+import SearchHeader from '../components/SearchHeader';
+
+interface SearchResultsRouteParams {
+  query: string;
+  category?: string;
+}
 
 export default function SearchResultsScreen() {
-  const navigation = useNavigation<any>();
-  const route = useRoute<any>();
+  const route = useRoute();
+  const navigation = useNavigation();
   const { colors } = useTheme();
+  const { isFavorite, toggleFavorite } = useFavorites();
   
-  const [searchQuery, setSearchQuery] = useState(route.params?.query || '');
-  const [results, setResults] = useState<SearchResult | null>(null);
-  const [loading, setLoading] = useState(false);
+  const { query, category } = route.params as SearchResultsRouteParams;
+  
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [currentPage, setCurrentPage] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [imageUrls, setImageUrls] = useState<{[key: number]: string}>({});
 
-  useEffect(() => {
-    if (searchQuery.trim()) {
-      performSearch();
-    }
-  }, [searchQuery]);
-
-  const performSearch = async (page: number = 0, append: boolean = false) => {
+  const loadSearchResults = async (refresh: boolean = false) => {
     try {
-      setLoading(true);
-      const searchResult = await SearchService.searchProducts(searchQuery, page, 20);
-      
-      if (append && results) {
-        setResults({
-          ...searchResult,
-          content: [...results.content, ...searchResult.content],
-        });
+      if (refresh) {
+        setRefreshing(true);
       } else {
-        setResults(searchResult);
+        setLoading(true);
+      }
+      setError(null);
+
+      const filters: any = {
+        search: query,
+        page: 0,
+        pageSize: 20,
+        sortBy: 'createdAt',
+        sortOrder: 'desc'
+      };
+      
+      // Ajouter le filtre de catégorie si fourni
+      if (category) {
+        filters.categoryId = category;
       }
       
-      setCurrentPage(page);
-      setHasMore(page < searchResult.totalPages - 1);
+      const response = await ProductService.getProducts(filters);
+
+      // Charger les URLs des images
+      const urls: {[key: number]: string} = {};
+      for (const product of response.content) {
+        try {
+          if (product.images && product.images.length > 0) {
+            urls[product.id] = ProductService.getImageUrl(product.images[0].id);
+          }
+        } catch (error) {
+          // Erreur silencieuse
+        }
+      }
+
+      setProducts(response.content);
+      setImageUrls(urls);
     } catch (error) {
-      console.error('Erreur lors de la recherche:', error);
+      console.error('Erreur recherche:', error);
+      setError('Impossible de charger les résultats de recherche');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await performSearch(0, false);
-    setRefreshing(false);
+  useEffect(() => {
+    loadSearchResults();
+  }, [query]);
+
+  const onRefresh = () => {
+    loadSearchResults(true);
   };
 
-  const handleLoadMore = () => {
-    if (!loading && hasMore) {
-      performSearch(currentPage + 1, true);
+  const handleProductPress = (productId: number) => {
+    navigation.navigate('ProductDetail', { productId: productId.toString() });
+  };
+
+  const handleFavoritePress = async (productId: number) => {
+    try {
+      await toggleFavorite(productId);
+      // Mettre à jour l'état local si nécessaire
+    } catch (error) {
+      console.error('Erreur toggle favoris:', error);
     }
   };
 
-  const handleSuggestionPress = (suggestion: any) => {
-    setSearchQuery(suggestion.title);
-    // Optionnel : naviguer vers le détail du produit
-    // navigation.navigate('ProductDetail', { productId: suggestion.id });
-  };
+  const renderProduct = ({ item }: { item: Product }) => (
+    <ProductCard
+      title={item.title}
+      brand={item.brand}
+      size={item.size}
+      condition={item.condition}
+      price={item.price.toString()}
+      priceWithFees={item.priceWithFees?.toString()}
+      image={imageUrls[item.id] || 'https://via.placeholder.com/120'}
+      likes={item.favoriteCount}
+      isFavorite={isFavorite(item.id)}
+      onPress={() => handleProductPress(item.id)}
+      onFavoritePress={() => handleFavoritePress(item.id)}
+    />
+  );
 
-  const renderProduct = ({ item }: { item: any }) => {
-    const condition = (item.condition as string) || 'Non spécifié';
-    return (
-      <ProductCard
-        title={item.title || ''}
-        brand={item.brand || undefined}
-        size={item.size || undefined}
-        condition={condition}
-        price={item.price?.toString() || '0'}
-        image={item.images && item.images.length > 0 ? ProductService.getProductImageUrl(item) || '' : ''}
-        likes={item.favoriteCount || 0}
-        onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
-      />
-    );
-  };
-
-  const renderEmptyState = () => (
+  const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="search-outline" size={64} color={colors.textSecondary} />
-      <Text style={[styles.emptyTitle, { color: colors.text }]}>
-        Aucun résultat trouvé
+      <Text style={[styles.emptyText, { color: colors.text }]}>
+        Aucun résultat trouvé pour "{query}"
       </Text>
-      <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-        Essayez de modifier vos critères de recherche
+      <Text style={[styles.emptySubtext, { color: colors.tabIconDefault }]}>
+        Essayez avec d'autres mots-clés
       </Text>
     </View>
   );
 
-  const renderFooter = () => {
-    if (!loading) return null;
+  if (loading) {
     return (
-      <View style={styles.loadingFooter}>
-        <ActivityIndicator size="small" color={colors.primary} />
-        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-          Chargement...
-        </Text>
-      </View>
-    );
-  };
-
-  return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          Résultats de recherche
-        </Text>
-        <View style={styles.headerSpacer} />
-      </View>
-
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <EnhancedSearchBar
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          onSubmit={() => performSearch(0, false)}
-          onSuggestionPress={handleSuggestionPress}
-          placeholder="Rechercher des produits..."
-        />
-      </View>
-
-      {/* Results */}
-      {loading && currentPage === 0 ? (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <SearchHeader title={category ? `${category} - ${query || 'Tous les produits'}` : `Résultats pour "${query}"`} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[styles.loadingText, { color: colors.text }]}>
             Recherche en cours...
           </Text>
         </View>
-      ) : (
-        <FlatList
-          data={results?.content || []}
-          renderItem={renderProduct}
-          keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={styles.listContainer}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              colors={[colors.primary]}
-              tintColor={colors.primary}
-            />
-          }
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.1}
-          ListEmptyComponent={renderEmptyState}
-          ListFooterComponent={renderFooter}
-          ListHeaderComponent={
-            results && results.totalElements > 0 ? (
-              <View style={styles.resultsHeader}>
-                <Text style={[styles.resultsCount, { color: colors.textSecondary }]}>
-                  {results.totalElements} résultat{results.totalElements > 1 ? 's' : ''} trouvé{results.totalElements > 1 ? 's' : ''}
-                </Text>
-              </View>
-            ) : null
-          }
-        />
-      )}
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SearchHeader title={`Résultats pour "${query}"`} />
+      <FlatList
+        data={products}
+        renderItem={renderProduct}
+        keyExtractor={(item) => item.id.toString()}
+        numColumns={2}
+        columnWrapperStyle={styles.productRow}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        ListEmptyComponent={renderEmpty}
+        showsVerticalScrollIndicator={false}
+      />
     </SafeAreaView>
   );
 }
@@ -189,29 +160,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  scrollContent: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    paddingBottom: 16,
   },
-  backButton: {
-    padding: 8,
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  headerSpacer: {
-    width: 40,
-  },
-  searchContainer: {
-    paddingTop: 16,
-    paddingHorizontal: 16,
+  productRow: {
+    justifyContent: 'space-between',
+    marginBottom: 16,
   },
   loadingContainer: {
     flex: 1,
@@ -222,39 +177,20 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 16,
   },
-  listContainer: {
-    paddingBottom: 24,
-  },
-  resultsHeader: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  resultsCount: {
-    fontSize: 14,
-  },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
-    paddingVertical: 64,
+    paddingVertical: 60,
   },
-  emptyTitle: {
-    fontSize: 20,
+  emptyText: {
+    fontSize: 18,
     fontWeight: '600',
-    marginTop: 16,
+    textAlign: 'center',
     marginBottom: 8,
-    textAlign: 'center',
   },
-  emptySubtitle: {
-    fontSize: 16,
+  emptySubtext: {
+    fontSize: 14,
     textAlign: 'center',
-    lineHeight: 24,
-  },
-  loadingFooter: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 16,
   },
 }); 

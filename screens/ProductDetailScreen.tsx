@@ -93,34 +93,31 @@ export default function ProductDetailScreen() {
     if (product && product.seller && product.seller.id) {
       ApiService.get(`/users/${product.seller.id}`)
         .then((res: any) => {
-          // Ajouter des données mock pour les badges si elles ne sont pas présentes
-          const sellerWithBadges = {
+          // Utiliser les vraies données du vendeur
+          const sellerWithDefaults = {
             ...res,
-            isVerified: res.isVerified ?? true, // Mock: vendeur vérifié
-            responseTime: res.responseTime ?? 'Réponse en moins d\'1h', // Mock: temps de réponse
-            rating: res.rating ?? 4.8, // Mock: note moyenne
-            reviewsCount: res.reviewsCount ?? 127, // Mock: nombre d'avis
-            adsCount: res.adsCount ?? 23, // Mock: nombre d'annonces
-            isFollowing: res.isFollowing ?? false, // Mock: pas encore suivi
+            isVerified: res.isVerified ?? true,
+            responseTime: res.responseTime ?? 'Réponse en moins d\'1h',
+            adsCount: res.adsCount ?? 0,
+            isFollowing: res.isFollowing ?? false,
+            createdAt: res.createdAt ?? '2023-01-15',
           };
-          setSeller(sellerWithBadges);
+          setSeller(sellerWithDefaults);
         })
         .catch(() => {
-          // En cas d'erreur, créer un vendeur mock complet
-          const mockSeller = {
+          // En cas d'erreur, créer un vendeur avec des valeurs par défaut
+          const defaultSeller = {
             id: product.seller!.id,
             firstName: product.seller!.firstName || 'Vendeur',
             lastName: product.seller!.lastName || 'Anonyme',
-            profilePicture: undefined, // Pas de photo de profil par défaut
-            isVerified: true, // Mock: vendeur vérifié
-            responseTime: 'Réponse en moins d\'1h', // Mock: temps de réponse
-            rating: 4.8, // Mock: note moyenne
-            reviewsCount: 127, // Mock: nombre d'avis
-            adsCount: 23, // Mock: nombre d'annonces
-            isFollowing: false, // Mock: pas encore suivi
-            createdAt: '2023-01-15', // Mock: date de création
+            profilePicture: undefined,
+            isVerified: true,
+            responseTime: 'Réponse en moins d\'1h',
+            adsCount: 0,
+            isFollowing: false,
+            createdAt: '2023-01-15',
           };
-          setSeller(mockSeller);
+          setSeller(defaultSeller);
         });
     }
   }, [product]);
@@ -265,7 +262,27 @@ export default function ProductDetailScreen() {
   };
 
   const handleBuyPress = () => {
-    Alert.alert('Achat', 'Fonctionnalité d\'achat à implémenter');
+    if (!isAuthenticated || isGuest) {
+      Alert.alert(
+        'Connexion requise',
+        'Vous devez être connecté pour effectuer un achat',
+        [
+          { text: 'Annuler', style: 'cancel' },
+          { text: 'Se connecter', onPress: () => navigation.navigate('AuthLanding') }
+        ]
+      );
+      return;
+    }
+
+    // Navigation vers l'écran de paiement
+    navigation.navigate('Payment', {
+      productId: productId!,
+      productPrice: product.price,
+      productTitle: product.title,
+      productImage: product.images && product.images.length > 0 
+        ? ProductService.getImageUrl(product.images[0].id)
+        : undefined
+    });
   };
 
   const handleToggleFavorite = async () => {
@@ -433,6 +450,7 @@ export default function ProductDetailScreen() {
           productPrice={product.price}
           onSendOffer={handleSendOffer}
           isOwnProduct={!!(isAuthenticated && user && product.seller && parseInt(user.id) === product.seller.id)}
+          productStatus={product.status}
         />
       </View>
     </View>

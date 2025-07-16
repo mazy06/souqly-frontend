@@ -9,6 +9,7 @@ import CategoryService, { Category } from '../services/CategoryService';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Types pour les catégories
 interface CategoryItem {
@@ -248,9 +249,32 @@ export default function CategoryScreen() {
   const loadCategory = async () => {
     setLoading(true);
     try {
-      // On récupère la catégorie par sa clé (avec ses enfants)
-      const cat = await CategoryService.getCategoryByKey(categoryKey);
-      setCategory(cat);
+      if (categoryKey === 'all') {
+        // Cas spécial pour "Tous les biens" - on crée une catégorie virtuelle
+        setCategory({
+          id: 0,
+          key: 'all',
+          label: 'Tous les biens',
+          active: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          children: [
+            { key: 'femmes', label: 'Femmes' },
+            { key: 'hommes', label: 'Hommes' },
+            { key: 'createurs', label: 'Créateurs' },
+            { key: 'enfants', label: 'Enfants' },
+            { key: 'maison', label: 'Maison' },
+            { key: 'electronique', label: 'Électronique' },
+            { key: 'divertissement', label: 'Divertissement' },
+            { key: 'loisirs', label: 'Loisirs' },
+            { key: 'sport', label: 'Sport' },
+          ]
+        } as Category);
+      } else {
+        // On récupère la catégorie par sa clé (avec ses enfants)
+        const cat = await CategoryService.getCategoryByKey(categoryKey);
+        setCategory(cat);
+      }
     } catch (error) {
       setCategory(null);
     } finally {
@@ -269,7 +293,7 @@ export default function CategoryScreen() {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}> 
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top','left','right']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={26} color={colors.text} />
@@ -286,19 +310,30 @@ export default function CategoryScreen() {
         </View>
       ) : (
         <FlatList
-          data={category ? [{ key: 'tous', label: 'Tous' }, ...(category.children || [])] : []}
+          data={category ? (() => {
+            const children = category.children || [];
+            // Si la catégorie a des sous-catégories, ajouter l'option "Tous"
+            if (children.length > 0) {
+              return [{ key: 'tous', label: 'Tous' }, ...children];
+            }
+            return children;
+          })() : []}
           keyExtractor={item => item.key}
           renderItem={({ item }) => (
             <CategoryListItem
               item={item}
               onPress={() => {
-                if ((item as any).children && Array.isArray((item as any).children) && (item as any).children.length > 0) {
+                if (item.key === 'tous') {
+                  // Navigation vers ArticlesList pour agréger tous les articles des sous-catégories
+                  navigation.navigate('ArticlesList');
+                } else if ((item as any).children && Array.isArray((item as any).children) && (item as any).children.length > 0) {
                   navigation.push('Category', {
                     categoryKey: item.key,
                     categoryLabel: item.label,
                   });
                 } else {
-                  // TODO: Naviguer vers la page produits ou afficher les résultats
+                  // Navigation vers ArticlesList avec le nom de la catégorie parent
+                  navigation.navigate('ArticlesList');
                 }
               }}
             />
@@ -307,7 +342,7 @@ export default function CategoryScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 

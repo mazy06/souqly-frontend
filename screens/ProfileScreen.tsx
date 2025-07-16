@@ -25,6 +25,7 @@ export type ProfileStackParamList = {
   EditProfile: undefined;
   MyAnnouncements: undefined;
   Transactions: undefined;
+  Orders: undefined;
 };
 
 export default function ProfileScreen() {
@@ -260,14 +261,7 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Role Badge - Only show for admin */}
-        {user.role === 'admin' && (
-          <View style={[styles.roleBadge, { backgroundColor: '#008080' }]}>
-            <Text style={styles.roleText}>
-              Administrateur
-            </Text>
-          </View>
-        )}
+
 
       {/* Wallet Card */}
       <WalletCard
@@ -282,7 +276,7 @@ export default function ProfileScreen() {
           onPress={() => navigation.navigate('MyAnnouncements')}
           activeOpacity={0.7}
         >
-          <Ionicons name="list-outline" size={24} color={colors.text} style={styles.announcementsIcon} />
+          <Ionicons name="list-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
           <Text style={[styles.announcementsTitle, { color: colors.text }]}>
             Mes annonces ({userProducts.length})
           </Text>
@@ -297,9 +291,24 @@ export default function ProfileScreen() {
           onPress={() => navigation.navigate('Transactions')}
           activeOpacity={0.7}
         >
-          <Ionicons name="swap-horizontal-outline" size={24} color={colors.text} style={styles.announcementsIcon} />
+          <Ionicons name="swap-horizontal-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
           <Text style={[styles.announcementsTitle, { color: colors.text }]}>
             Transactions
+          </Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Commandes - Design ultra simple */}
+      <View style={styles.announcementsSection}>
+        <TouchableOpacity
+          style={styles.announcementsCard}
+          onPress={() => navigation.navigate('Orders')}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="bag-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
+          <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+            Commandes
           </Text>
           <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
@@ -312,7 +321,7 @@ export default function ProfileScreen() {
           onPress={() => setSettingsExpanded(!settingsExpanded)}
           activeOpacity={0.7}
         >
-          <Ionicons name="settings-outline" size={24} color={colors.text} style={styles.announcementsIcon} />
+          <Ionicons name="settings-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
           <Text style={[styles.announcementsTitle, { color: colors.text }]}>
             Paramètres
           </Text>
@@ -412,7 +421,7 @@ export default function ProfileScreen() {
             onPress={() => setSecurityExpanded(!securityExpanded)}
             activeOpacity={0.7}
           >
-            <Ionicons name="shield-outline" size={24} color={colors.text} style={styles.announcementsIcon} />
+            <Ionicons name="shield-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
             <Text style={[styles.announcementsTitle, { color: colors.text }]}>
               Connexion et Sécurité
             </Text>
@@ -489,7 +498,7 @@ export default function ProfileScreen() {
             onPress={() => setHelpExpanded(!helpExpanded)}
             activeOpacity={0.7}
           >
-            <Ionicons name="help-circle-outline" size={24} color={colors.text} style={styles.announcementsIcon} />
+            <Ionicons name="help-circle-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
             <Text style={[styles.announcementsTitle, { color: colors.text }]}>
               Aide
             </Text>
@@ -532,21 +541,17 @@ export default function ProfileScreen() {
 
         {/* Admin Section */}
         {user.role === 'admin' && (
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Administration</Text>
-            
+          <View style={styles.announcementsSection}>
             <TouchableOpacity
-              style={[styles.menuItem, { backgroundColor: colors.card, borderColor: colors.border }]}
+              style={styles.announcementsCard}
               onPress={() => navigation.navigate('AdminCategories')}
+              activeOpacity={0.7}
             >
-              <View style={styles.menuItemContent}>
-                <Ionicons name="settings-outline" size={24} color={colors.text} style={styles.menuItemIcon} />
-                <View style={styles.menuItemTextContainer}>
-                  <Text style={[styles.menuItemText, { color: colors.text }]}>Gestion des catégories</Text>
-                  <Text style={[styles.menuItemSubtext, { color: colors.text + '80' }]}>Administrer les catégories</Text>
-                </View>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.text + '60'} />
+              <Ionicons name="settings-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
+              <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+                Gestion des catégories
+              </Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
         )}

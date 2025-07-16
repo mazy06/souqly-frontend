@@ -275,6 +275,11 @@ export default function SellScreen() {
         )}
 
         <ScrollView contentContainerStyle={{ ...styles.scrollContent, paddingHorizontal: 16 }}>
+          {/* Titre de la page */}
+          <View style={styles.header}>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>Publier votre article</Text>
+          </View>
+
           {/* Photos */}
           <ProductImagePicker
             imageIds={formData.imageIds}
@@ -422,7 +427,6 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 24,
-    paddingTop: 60,
   },
   headerTitle: {
     fontSize: 24,

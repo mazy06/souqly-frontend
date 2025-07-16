@@ -14,6 +14,7 @@ import BulkDiscountScreen from '../screens/BulkDiscountScreen';
 import Colors from '../constants/Colors';
 import { useColorScheme } from 'react-native';
 import TransactionsScreen from '../screens/TransactionsScreen';
+import OrdersScreen from '../screens/OrdersScreen';
 
 export type ProfileStackParamList = {
   ProfileMain: undefined;
@@ -25,6 +26,7 @@ export type ProfileStackParamList = {
   EditProfile: undefined;
   MyAnnouncements: undefined;
   Transactions: undefined;
+  Orders: undefined;
   EmailSettings: undefined;
   PaymentMethods: undefined;
   NotificationSettings: undefined;
@@ -54,6 +56,7 @@ export default function ProfileStack() {
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       <Stack.Screen name="MyAnnouncements" component={MyAnnouncementsScreen} />
       <Stack.Screen name="Transactions" component={TransactionsScreen} />
+      <Stack.Screen name="Orders" component={OrdersScreen} />
       <Stack.Screen name="EmailSettings" component={EmailSettingsScreen} />
       <Stack.Screen name="PaymentMethods" component={PaymentMethodsScreen} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />

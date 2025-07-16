@@ -1,405 +1,477 @@
-import React, { useState, useEffect, useCallback, memo } from 'react';
-import { View, ScrollView, RefreshControl, ActivityIndicator, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, ScrollView, StyleSheet, RefreshControl, ActivityIndicator, Alert, Text } from 'react-native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import ProductCard from '../components/ProductCard';
-import ProductService, { Product } from '../services/ProductService';
-import { useTheme } from '../contexts/ThemeContext';
-import { useAuth } from '../contexts/AuthContext';
-import { useFavorites } from '../hooks/useFavorites';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import SearchBar from '../components/SearchBar';
-import FilterChips from '../components/FilterChips';
-import VisitorBadge from '../components/VisitorBadge';
-import LoadingSpinner from '../components/Skeleton';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
+import { useFavorites } from '../hooks/useFavorites';
+import ProductService, { Product } from '../services/ProductService';
+import HomeHeader from '../components/HomeHeader';
+import HorizontalProductList from '../components/HorizontalProductList';
+import PromotionalBanner from '../components/PromotionalBanner';
+import VisitorBadge from '../components/VisitorBadge';
+import * as ImagePicker from 'expo-image-picker';
 
 // Types pour la navigation
 export type HomeStackParamList = {
   HomeMain: undefined;
   ProductDetail: { productId: string };
+  ArticlesList: undefined;
+  SearchResults: { query: string; category?: string };
 };
 
-// Composant header fixe mémorisé
-const FixedHeader = memo(({ 
-  search, 
-  setSearch, 
-  handleSearchSubmit, 
-  handleClearSearch, 
-  activeSearch, 
-  selectedFilter, 
-  setSelectedFilter,
-  navigation 
-}: {
-  search: string;
-  setSearch: (text: string) => void;
-  handleSearchSubmit: () => void;
-  handleClearSearch: () => void;
-  activeSearch: string;
-  selectedFilter: string;
-  setSelectedFilter: (filter: string) => void;
-  navigation: any;
-}) => {
-  const { colors } = useTheme();
-  
-  const handleVisitorSignup = useCallback(() => {
-    navigation.navigate('ProfileStack' as never);
-  }, [navigation]);
-  
-  return (
-    <View style={[styles.fixedHeader, { backgroundColor: colors.background }]}>
-      <VisitorBadge onSignup={handleVisitorSignup} />
-      <SearchBar
-        value={search}
-        onChangeText={setSearch}
-        onSubmit={handleSearchSubmit}
-        onClear={handleClearSearch}
-        placeholder="Rechercher un article ou un membre"
-      />
-      {activeSearch && (
-        <View style={[styles.searchIndicator, { backgroundColor: colors.card }]}>
-          <Text style={[styles.searchText, { color: colors.text }]}>
-            Recherche : "{activeSearch}"
-          </Text>
-          <TouchableOpacity onPress={handleClearSearch} style={styles.clearSearchButton}>
-            <Text style={[styles.clearSearchText, { color: colors.primary }]}>
-              Effacer
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      <FilterChips selected={selectedFilter} onSelect={setSelectedFilter} />
-    </View>
-  );
-}, (prevProps, nextProps) => {
-  // Comparaison personnalisée pour éviter les re-renders inutiles
-  return (
-    prevProps.search === nextProps.search &&
-    prevProps.activeSearch === nextProps.activeSearch &&
-    prevProps.selectedFilter === nextProps.selectedFilter
-  );
-});
-
-// Composant contenu principal (liste + spinner)
-const ContentArea = memo(({ 
-  products, 
-  imageUrls, 
-  isFavorite, 
-  handleProductPress, 
-  handleFavoritePress, 
-  loading, 
-  initialLoading, 
-  loadingMore, 
-  refreshing, 
-  onRefresh, 
-  loadMoreProducts, 
-  colors 
-}: {
-  products: Product[];
-  imageUrls: {[key: number]: string};
-  isFavorite: (id: number) => boolean;
-  handleProductPress: (id: number) => void;
-  handleFavoritePress: (id: number) => void;
-  loading: boolean;
-  initialLoading: boolean;
-  loadingMore: boolean;
-  refreshing: boolean;
-  onRefresh: () => void;
-  loadMoreProducts: () => void;
-  colors: any;
-}) => {
-  const renderProduct = useCallback(({ item }: { item: Product }) => (
-    <ProductCard
-      title={item.title}
-      brand={item.brand}
-      size={item.size}
-      condition={item.condition}
-      price={item.price.toString()}
-      priceWithFees={item.priceWithFees?.toString()}
-      image={imageUrls[item.id] || 'https://via.placeholder.com/120'}
-      likes={item.favoriteCount}
-      isFavorite={isFavorite(item.id)}
-      onPress={() => handleProductPress(item.id)}
-      onFavoritePress={() => handleFavoritePress(item.id)}
-    />
-  ), [imageUrls, isFavorite, handleProductPress, handleFavoritePress]);
-
-  const renderFooter = useCallback(() => {
-    if (!loadingMore) return null;
-    return (
-      <View style={styles.loadingMoreContainer}>
-        {/* <ActivityIndicator size="small" color={colors.primary} />
-        <Text style={[styles.loadingMoreText, { color: colors.text }]}>
-          Chargement...
-        </Text> */}
-        <Text style={[styles.loadingMoreText, { color: colors.text }]}>
-          Chargement plus de produits... (spinner commenté)
-        </Text>
-      </View>
-    );
-  }, [loadingMore, colors]);
-
-  const renderEmpty = useCallback(() => {
-    return (
-      <View style={styles.emptyContainer}>
-        <Text style={[styles.emptyText, { color: colors.text }]}>
-          Aucun produit disponible pour le moment
-        </Text>
-        <Text style={[styles.emptySubtext, { color: colors.tabIconDefault }]}>
-          Soyez le premier à publier un article !
-        </Text>
-      </View>
-    );
-  }, [colors]);
-
-  // Si en cours de chargement initial, afficher le spinner
-  if (initialLoading) {
-    return (
-      <View style={styles.contentLoadingContainer}>
-        {/* <LoadingSpinner 
-          message="Chargement des produits..." 
-          heightRatio={0.4}
-        /> */}
-        <Text style={[styles.loadingText, { color: colors.text }]}>
-          Chargement des produits... (spinner commenté)
-        </Text>
-      </View>
-    );
-  }
-
-  // Si en cours de recherche, afficher le spinner
-  if (loading) {
-    console.log('🔄 [HomeScreen] Affichage du spinner de recherche - loading=true');
-    return (
-      <View style={styles.contentLoadingContainer}>
-        {/* <LoadingSpinner 
-          message="Recherche en cours..." 
-          heightRatio={0.25}
-        /> */}
-        <Text style={[styles.loadingText, { color: colors.text }]}>
-          Recherche en cours... (spinner commenté) - État loading: {loading}
-        </Text>
-      </View>
-    );
-  }
-
-  return (
-    <FlatList
-      data={products}
-      renderItem={renderProduct}
-      keyExtractor={(item) => item.id.toString()}
-      numColumns={2}
-      columnWrapperStyle={styles.productRow}
-      contentContainerStyle={[styles.scrollContent, { backgroundColor: colors.background }]}
-      // refreshControl={
-      //   <RefreshControl 
-      //     refreshing={refreshing} 
-      //     onRefresh={onRefresh}
-      //     colors={[colors.primary]}
-      //     tintColor={colors.primary}
-      //   />
-      // }
-      onEndReached={loadMoreProducts}
-      onEndReachedThreshold={0.1}
-      ListFooterComponent={renderFooter}
-      ListEmptyComponent={renderEmpty}
-      showsVerticalScrollIndicator={false}
-      removeClippedSubviews={true}
-      maxToRenderPerBatch={10}
-      windowSize={10}
-      initialNumToRender={10}
-    />
-  );
-});
-
 export default function HomeScreen() {
+  console.log('🏠 [HomeScreen] Nouvelle page d\'accueil chargée');
   const navigation = useNavigation<StackNavigationProp<HomeStackParamList>>();
+  const { logout, isGuest, isAuthenticated } = useAuth();
   const { colors } = useTheme();
-  const { isAuthenticated, isGuest } = useAuth();
-  const { isFavorite, toggleFavorite } = useFavorites();
-  const insets = useSafeAreaInsets();
+  const { isFavorite, toggleFavorite, refreshFavorites } = useFavorites();
   
-  const [products, setProducts] = useState<Product[]>([]);
-  const [imageUrls, setImageUrls] = useState<{[key: number]: string}>({});
-  const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
-  const [totalPages, setTotalPages] = useState(0);
+  // États pour la recherche et filtres
   const [search, setSearch] = useState('');
-  const [activeSearch, setActiveSearch] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('Voir tout');
-  const [isInitialized, setIsInitialized] = useState(false);
   
-  console.log('🏠 [HomeScreen] Composant monté - loading:', loading, 'initialLoading:', initialLoading);
+  // États pour les données
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [imageUrls, setImageUrls] = useState<{[key: number]: string | null}>({});
+  const [favoriteCounts, setFavoriteCounts] = useState<{ [productId: number]: number }>({});
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  
+  // États pour les différentes sections
+  const [favorites, setFavorites] = useState<Product[]>([]);
+  const [recentSearches, setRecentSearches] = useState<Product[]>([]);
+  const [recentlyViewed, setRecentlyViewed] = useState<Product[]>([]);
+  const [recentProducts, setRecentProducts] = useState<Product[]>([]);
+  const [featuredCategories, setFeaturedCategories] = useState<{
+    [category: string]: Product[]
+  }>({});
 
-  const loadProducts = useCallback(async (page: number = 0, append: boolean = false, searchTerm?: string) => {
-    console.log(`🚀 [HomeScreen] loadProducts appelé avec page=${page}, append=${append}, search=${searchTerm}`);
+  // Fonction pour filtrer les produits par catégorie
+  const getFilteredProducts = (products: Product[], filter: string) => {
+    if (filter === 'Voir tout') return products;
+    
+    const filterMap: { [key: string]: string[] } = {
+      'Femmes': ['femmes', 'vêtements-femmes', 'accessoires-femmes'],
+      'Hommes': ['hommes', 'vêtements-hommes', 'accessoires-hommes'],
+      'Articles de créateurs': ['créateurs', 'artisanat', 'design'],
+      'Enfants': ['enfants', 'bébé', 'jouets'],
+      'Maison': ['maison', 'décoration', 'jardin'],
+      'Électronique': ['électronique', 'informatique', 'téléphonie']
+    };
+    
+    const categories = filterMap[filter] || [];
+    return products.filter(product => 
+      categories.some(cat => 
+        product.category?.label?.toLowerCase().includes(cat.toLowerCase()) ||
+        product.category?.categoryKey?.toLowerCase().includes(cat.toLowerCase()) ||
+        product.title?.toLowerCase().includes(cat.toLowerCase())
+      )
+    );
+  };
+
+  const loadHomeData = async () => {
+    // Éviter les chargements multiples
+    if (loading && !isInitialLoad) {
+      console.log('[DEBUG] Chargement déjà en cours, ignoré');
+      return;
+    }
+
     try {
-      if (page === 0 && !append) {
-        console.log('🚀 [HomeScreen] Début du chargement - setLoading(true)');
-        setError(null);
-        setLoading(true);
-      } else {
-        setLoadingMore(true);
+      setLoading(true);
+      setIsInitialLoad(false);
+      
+      // Charger toutes les données en parallèle pour améliorer les performances
+      const [favoritesList, recentResponse, featuredData] = await Promise.allSettled([
+        // Charger les favoris (si connecté)
+        isAuthenticated && !isGuest ? ProductService.getFavorites() : Promise.resolve([]),
+        
+        // Charger les produits récents
+        ProductService.getProductsCacheable({ page: 0, pageSize: 10 }),
+        
+        // Charger les catégories mises en avant
+        (async () => {
+          const categories = ['immobilier', 'emploi', 'services', 'mobilier', 'electromenager'];
+          const featuredData: {[category: string]: Product[]} = {};
+          
+          const categoryPromises = categories.map(async (category) => {
+            try {
+              const response = await ProductService.getProductsCacheable({ 
+                page: 0, 
+                pageSize: 5
+              });
+              return { category, products: response.content || [] };
+            } catch (error) {
+              console.log('Erreur chargement catégorie', category, ':', error);
+              return { category, products: [] };
+            }
+          });
+          
+          const results = await Promise.all(categoryPromises);
+          results.forEach(({ category, products }) => {
+            featuredData[category] = products;
+          });
+          
+          return featuredData;
+        })()
+      ]);
+      
+      // Traiter les résultats
+      if (favoritesList.status === 'fulfilled') {
+        setFavorites(favoritesList.value.slice(0, 10));
+      }
+      
+      if (recentResponse.status === 'fulfilled') {
+        setRecentProducts(recentResponse.value.content || []);
+      }
+      
+      if (featuredData.status === 'fulfilled') {
+        setFeaturedCategories(featuredData.value);
       }
 
-      const response = await ProductService.getProducts({
-        page: page,
-        pageSize: 10,
-        sortBy: 'createdAt',
-        sortOrder: 'desc',
-        search: searchTerm
-      });
+      // Charger les URLs des images et les compteurs de favoris en parallèle
+      const allProducts = [
+        ...(favoritesList.status === 'fulfilled' ? favoritesList.value : []),
+        ...(recentResponse.status === 'fulfilled' ? recentResponse.value.content || [] : []),
+        ...(featuredData.status === 'fulfilled' ? Object.values(featuredData.value).flat() : [])
+      ];
+      
+      console.log('[DEBUG] Total produits à traiter:', allProducts.length);
+      
+      // Charger les images et compteurs en parallèle
+      await Promise.all([
+        loadImageUrls(allProducts),
+        loadFavoriteCounts(allProducts)
+      ]);
 
-      // Mettre à jour les métadonnées de pagination
-      setTotalPages(response.totalPages);
-      setCurrentPage(response.currentPage);
-      setHasMore(response.currentPage < response.totalPages - 1);
+    } catch (error) {
+      console.error('Erreur chargement données accueil:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      // Charger les URLs des images pour les nouveaux produits
-      const urls: {[key: number]: string} = {};
-      for (const product of response.content) {
+  const loadImageUrls = async (products: Product[]) => {
+    const urls: {[key: number]: string | null} = {};
+    console.log('[DEBUG] loadImageUrls - Nombre de produits:', products.length);
+    
+    // Traitement par lots pour améliorer les performances
+    const batchSize = 5;
+    for (let i = 0; i < products.length; i += batchSize) {
+      const batch = products.slice(i, i + batchSize);
+      
+      // Traiter le lot en parallèle
+      const batchPromises = batch.map(async (product) => {
         try {
-          const imageUrl = await ProductService.getProductImageUrl(product);
-          if (imageUrl) {
-            urls[product.id] = imageUrl;
+          console.log('[DEBUG] Traitement produit ID:', product.id, 'Titre:', product.title);
+          
+          // Vérifier d'abord si l'image est déjà dans le produit
+          if (product.images && product.images.length > 0) {
+            const imageId = product.images[0].id;
+            const imageUrl = ProductService.getImageUrl(imageId);
+            console.log('[DEBUG] Image trouvée dans le produit', product.id, ':', imageUrl);
+            return { productId: product.id, imageUrl };
+          }
+          
+          // Si pas d'image dans le produit, essayer de la récupérer depuis l'API
+          console.log('[DEBUG] Aucune image dans le produit, récupération depuis l\'API...');
+          try {
+            const productImages = await ProductService.getProductImages(product.id);
+            console.log('[DEBUG] Images récupérées depuis l\'API pour produit', product.id, ':', productImages);
+            
+            if (productImages && productImages.length > 0) {
+              const imageId = productImages[0].id;
+              const imageUrl = ProductService.getImageUrl(imageId);
+              console.log('[DEBUG] URL générée via API pour produit', product.id, ':', imageUrl);
+              return { productId: product.id, imageUrl };
+            } else {
+              console.log('[DEBUG] Aucune image trouvée pour le produit', product.id);
+              return { productId: product.id, imageUrl: null };
+            }
+          } catch (apiError) {
+            console.error('[DEBUG] Erreur API pour produit', product.id, ':', apiError);
+            return { productId: product.id, imageUrl: null };
           }
         } catch (error) {
-          // Erreur silencieuse pour le chargement d'image
+          console.error('[DEBUG] Erreur lors du chargement de l\'image pour le produit', product.id, ':', error);
+          return { productId: product.id, imageUrl: null };
         }
-      }
-
-      // Mettre à jour les produits et images
-      if (append) {
-        setProducts(prev => [...prev, ...response.content]);
-        setImageUrls(prev => ({ ...prev, ...urls }));
-      } else {
-        setProducts(response.content);
-        setImageUrls(urls);
-      }
-    } catch (err) {
-      console.error('[HomeScreen] Erreur lors du chargement des produits:', err);
-      setError('Impossible de charger les produits. Veuillez réessayer plus tard.');
-    } finally {
-      console.log('✅ [HomeScreen] Fin du chargement - setLoading(false)');
-      setLoading(false);
-      setLoadingMore(false);
-      setInitialLoading(false);
+      });
+      
+      // Attendre que tous les produits du lot soient traités
+      const batchResults = await Promise.all(batchPromises);
+      
+      // Ajouter les résultats au dictionnaire
+      batchResults.forEach(({ productId, imageUrl }) => {
+        urls[productId] = imageUrl;
+      });
     }
+    
+    // Mettre à jour l'état une seule fois à la fin
+    console.log('[DEBUG] URLs finales:', urls);
+    setImageUrls(prev => ({ ...prev, ...urls }));
+  };
+
+  const loadFavoriteCounts = async (products: Product[]) => {
+    const ids = products.map(p => p.id);
+    if (ids.length > 0) {
+      try {
+        console.log('[DEBUG] Chargement des compteurs de favoris pour', ids.length, 'produits');
+        const counts = await ProductService.getFavoriteCounts(ids);
+        console.log('[DEBUG] Compteurs reçus:', counts);
+        setFavoriteCounts(counts);
+      } catch (error) {
+        console.error('[DEBUG] Erreur chargement counts favoris:', error);
+        // Utiliser les compteurs par défaut depuis les produits
+        const defaultCounts: { [productId: number]: number } = {};
+        products.forEach(product => {
+          defaultCounts[product.id] = product.favoriteCount || 0;
+        });
+        setFavoriteCounts(defaultCounts);
+      }
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadHomeData();
+    setRefreshing(false);
+  };
+
+  // Charger les données au montage du composant et quand l'utilisateur revient sur l'écran
+  useEffect(() => {
+    loadHomeData();
   }, []);
 
-  const onRefresh = useCallback(async () => {
-    console.log('[HomeScreen] Refresh manuel déclenché');
-    setRefreshing(true);
-    setCurrentPage(0);
-    setHasMore(true);
-    await loadProducts(0, false, activeSearch);
-    setRefreshing(false);
-  }, [loadProducts, activeSearch]);
+  // Recharger les données quand l'utilisateur revient sur l'écran
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🏠 [HomeScreen] Focus sur la page d\'accueil');
+      // Rafraîchir les favoris si l'utilisateur est connecté
+      if (isAuthenticated && !isGuest) {
+        refreshFavorites();
+      }
+    }, [isAuthenticated, isGuest])
+  );
 
-  const loadMoreProducts = useCallback(async () => {
-    if (!loadingMore && hasMore) {
-      const nextPage = currentPage + 1;
-      await loadProducts(nextPage, true, activeSearch);
-    }
-  }, [loadingMore, hasMore, currentPage, loadProducts, activeSearch]);
-
-  // Chargement initial uniquement
-  useEffect(() => {
-    if (!isInitialized) {
-      console.log('[HomeScreen] Chargement initial');
-      setIsInitialized(true);
-      loadProducts(0, false);
-    }
-  }, [isInitialized, loadProducts]);
-
-  const handleProductPress = useCallback((productId: number) => {
+  const handleProductPress = (productId: number) => {
     navigation.navigate('ProductDetail', { productId: productId.toString() });
-  }, [navigation]);
+  };
 
-  const handleFavoritePress = useCallback(async (productId: number) => {
+  const handleFavoritePress = async (productId: number) => {
     try {
       const result = await toggleFavorite(productId);
-      // Mettre à jour l'état du produit dans la liste
-      setProducts(prev => 
-        prev.map(product => 
-          product.id === productId 
-            ? { ...product, favoriteCount: result.favoriteCount }
-            : product
-        )
-      );
+      
+      // Mise à jour optimiste du compteur
+      setFavoriteCounts(prev => {
+        const current = prev[productId] || 0;
+        return {
+          ...prev,
+          [productId]: result.isFavorite ? current + 1 : Math.max(0, current - 1)
+        };
+      });
     } catch (error) {
-      console.error('Erreur lors du toggle des favoris:', error);
+      console.error('Erreur toggle favoris:', error);
       Alert.alert('Erreur', 'Impossible de modifier les favoris pour le moment');
     }
-  }, [toggleFavorite]);
+  };
 
-  const handleSearchSubmit = useCallback(async () => {
+  const handleSearchSubmit = async () => {
     if (search.trim()) {
-      console.log('🔍 [HomeScreen] Recherche soumise:', search);
-      console.log('🔍 [HomeScreen] État loading avant recherche:', loading);
-      setActiveSearch(search.trim());
-      await loadProducts(0, false, search.trim());
-      console.log('🔍 [HomeScreen] État loading après recherche:', loading);
+      try {
+        // Navigation vers l'écran de recherche avec le terme
+        navigation.navigate('SearchResults', { query: search.trim() });
+      } catch (error) {
+        console.error('Erreur recherche:', error);
+        Alert.alert('Erreur', 'Impossible de lancer la recherche pour le moment');
+      }
     }
-  }, [search, loadProducts, loading]);
+  };
 
-  const handleClearSearch = useCallback(() => {
-    console.log('[HomeScreen] Effacement de la recherche');
-    setSearch('');
-    setActiveSearch('');
-    loadProducts(0, false);
-  }, [loadProducts]);
+  const handleCameraPress = async () => {
+    const pickImage = async (fromCamera: boolean) => {
+      let result;
+      if (fromCamera) {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission refusée', "L'application a besoin de la permission d'utiliser la caméra.");
+          return;
+        }
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: false,
+          quality: 0.7,
+        });
+      } else {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission refusée', "L'application a besoin de la permission d'accéder à la galerie.");
+          return;
+        }
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: false,
+          quality: 0.7,
+        });
+      }
+      // TODO: Implémenter la recherche par image
+    };
 
-  // Mémoriser les props du header pour éviter les re-renders
-  const headerProps = useCallback(() => ({
-    search,
-    setSearch,
-    handleSearchSubmit,
-    handleClearSearch,
-    activeSearch,
-    selectedFilter,
-    setSelectedFilter,
-    navigation
-  }), [search, handleSearchSubmit, handleClearSearch, activeSearch, selectedFilter, navigation]);
+    Alert.alert(
+      'Recherche par image',
+      'Choisissez une option',
+      [
+        { text: 'Prendre une photo', onPress: () => pickImage(true) },
+        { text: 'Choisir dans la galerie', onPress: () => pickImage(false) },
+        { text: 'Annuler', style: 'cancel' },
+      ]
+    );
+  };
 
-  // Mémoriser les props de la zone de contenu
-  const contentProps = useCallback(() => ({
-    products,
-    imageUrls,
-    isFavorite,
-    handleProductPress,
-    handleFavoritePress,
-    loading,
-    initialLoading,
-    loadingMore,
-    refreshing,
-    onRefresh,
-    loadMoreProducts,
-    colors
-  }), [products, imageUrls, isFavorite, handleProductPress, handleFavoritePress, loading, initialLoading, loadingMore, refreshing, onRefresh, loadMoreProducts, colors]);
+  const handleViewAllFavorites = () => {
+    (navigation as any).navigate('Favorites');
+  };
 
-  if (error) {
+  const handleViewAllRecent = () => {
+    navigation.navigate('ArticlesList');
+  };
+
+  const handleViewAllCategory = (category: string) => {
+    // Navigation vers l'écran de recherche avec la catégorie pré-sélectionnée
+    navigation.navigate('SearchResults', { 
+      query: '', 
+      category: category 
+    });
+  };
+
+  // Mapping catégorie -> icône Ionicons
+  const categoryIcons: { [key: string]: string } = {
+    immobilier: 'home-outline',
+    emploi: 'briefcase-outline',
+    services: 'construct-outline',
+    mobilier: 'bed-outline',
+    electromenager: 'tv-outline',
+  };
+
+  if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Text style={[styles.errorText, { color: colors.text }]}>{error}</Text>
-        <Text style={[styles.retryText, { color: colors.tabIconDefault }]}>
-          Tire vers le bas pour réessayer
-        </Text>
-      </View>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top','left','right']}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top','left','right','bottom']}>
-      <FixedHeader {...headerProps()} />
-      <View style={styles.contentArea}>
-        <ContentArea {...contentProps()} />
-      </View>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top','left','right']}>
+      <ScrollView
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        showsVerticalScrollIndicator={false}
+      >
+        <HomeHeader
+          search={search}
+          onSearchChange={setSearch}
+          onSearchSubmit={handleSearchSubmit}
+          onCameraPress={handleCameraPress}
+          selectedFilter={selectedFilter}
+          onFilterSelect={setSelectedFilter}
+        />
+        
+        <VisitorBadge onSignup={() => logout()} />
+
+        {/* Bannière publicitaire */}
+        <PromotionalBanner
+          title="Découvrez nos nouveautés"
+          subtitle="Les meilleures offres vous attendent"
+          onPress={() => navigation.navigate('ArticlesList')}
+        />
+
+        {/* Coups de cœur */}
+        {isAuthenticated && !isGuest && favorites.length > 0 && (
+          <HorizontalProductList
+            title="Vos coups de cœur"
+            products={favorites}
+            onProductPress={handleProductPress}
+            onFavoritePress={handleFavoritePress}
+            onViewAllPress={handleViewAllFavorites}
+            imageUrls={imageUrls}
+            favoriteCounts={favoriteCounts}
+            isFavorite={isFavorite}
+            icon="heart"
+          />
+        )}
+
+        {/* Dernières recherches */}
+        {recentSearches.length > 0 && (
+          <HorizontalProductList
+            title="D'après vos dernières recherches"
+            products={recentSearches}
+            onProductPress={handleProductPress}
+            onFavoritePress={handleFavoritePress}
+            imageUrls={imageUrls}
+            favoriteCounts={favoriteCounts}
+            isFavorite={isFavorite}
+            icon="search"
+          />
+        )}
+
+        {/* Récemment vus */}
+        {recentlyViewed.length > 0 && (
+          <HorizontalProductList
+            title="Récemment vus"
+            products={recentlyViewed}
+            onProductPress={handleProductPress}
+            onFavoritePress={handleFavoritePress}
+            imageUrls={imageUrls}
+            favoriteCounts={favoriteCounts}
+            isFavorite={isFavorite}
+            icon="time"
+          />
+        )}
+
+        {/* Annonces récentes */}
+        {recentProducts.length > 0 && (
+          <HorizontalProductList
+            title="Annonces récentes"
+            products={getFilteredProducts(recentProducts, selectedFilter)}
+            onProductPress={handleProductPress}
+            onFavoritePress={handleFavoritePress}
+            onViewAllPress={handleViewAllRecent}
+            imageUrls={imageUrls}
+            favoriteCounts={favoriteCounts}
+            isFavorite={isFavorite}
+            icon="trending-up"
+          />
+        )}
+        
+
+
+        {/* Catégories mises en avant */}
+        {Object.entries(featuredCategories).map(([category, products]) => {
+          if (products.length > 0) {
+            return (
+              <HorizontalProductList
+                key={category}
+                title={category.charAt(0).toUpperCase() + category.slice(1)}
+                products={getFilteredProducts(products, selectedFilter)}
+                onProductPress={handleProductPress}
+                onFavoritePress={handleFavoritePress}
+                onViewAllPress={() => handleViewAllCategory(category)}
+                imageUrls={imageUrls}
+                favoriteCounts={favoriteCounts}
+                isFavorite={isFavorite}
+                icon={categoryIcons[category] || 'grid'}
+                category={category}
+              />
+            );
+          }
+          return null;
+        })}
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -408,97 +480,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  fixedHeader: {
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  contentArea: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 16,
-  },
-  productRow: {
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-  },
-  errorText: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  retryText: {
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  loadingMoreContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  loadingMoreText: {
-    marginLeft: 8,
-    fontSize: 14,
-  },
-  searchIndicator: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginHorizontal: 8,
-    marginBottom: 8,
-    borderRadius: 8,
-  },
-  searchText: {
-    fontSize: 14,
-    flex: 1,
-  },
-  clearSearchButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-  },
-  clearSearchText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  listLoadingContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 60,
-  },
-  contentLoadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 60,
   },
 }); 

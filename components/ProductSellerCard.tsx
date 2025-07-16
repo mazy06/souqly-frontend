@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import SellerReviews from './SellerReviews';
+import ReviewService, { Review, SellerRating } from '../services/ReviewService';
 
 interface Seller {
   id: number;
@@ -23,14 +24,6 @@ interface ProductSellerCardProps {
   onPress?: () => void;
 }
 
-// Mock reviews data (repris de SellerReviews)
-const mockReviews = [
-  { id: 1, author: 'Amina', rating: 5, comment: 'Vendeur très sérieux, livraison rapide !', date: '2024-06-01' },
-  { id: 2, author: 'Youssef', rating: 4, comment: 'Bon échange, produit conforme à la description.', date: '2024-05-20' },
-  { id: 3, author: 'Sara', rating: 5, comment: 'Super vendeur, je recommande !', date: '2024-05-10' },
-  { id: 4, author: 'Ali', rating: 3, comment: 'Livraison un peu lente mais bon contact.', date: '2024-04-28' },
-  { id: 5, author: 'Fatima', rating: 4, comment: 'Produit conforme, vendeur réactif.', date: '2024-04-15' },
-];
 const PAGE_SIZE = 2;
 
 function renderStars(rating: number) {
@@ -48,8 +41,29 @@ function renderStars(rating: number) {
 export default function ProductSellerCard({ seller, onFollow, onPress }: ProductSellerCardProps) {
   const [showReviews, setShowReviews] = useState(false);
   const [page, setPage] = useState(1);
-  const paginatedReviews = mockReviews.slice(0, page * PAGE_SIZE);
-  const hasMore = mockReviews.length > paginatedReviews.length;
+  const [sellerRating, setSellerRating] = useState<SellerRating | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const loadSellerRating = async () => {
+      if (seller.id) {
+        setLoading(true);
+        try {
+          const rating = await ReviewService.getSellerRating(seller.id);
+          setSellerRating(rating);
+        } catch (error) {
+          console.error('Erreur lors du chargement des commentaires:', error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadSellerRating();
+  }, [seller.id]);
+
+  const paginatedReviews = sellerRating?.recentReviews.slice(0, page * PAGE_SIZE) || [];
+  const hasMore = sellerRating ? sellerRating.recentReviews.length > paginatedReviews.length : false;
 
   return (
     <View style={styles.card}>
@@ -70,8 +84,8 @@ export default function ProductSellerCard({ seller, onFollow, onPress }: Product
           </View>
           <Text style={styles.stats}>{`${seller.adsCount ?? 0} annonces`}</Text>
           <View style={styles.ratingRow}>
-            <Text style={styles.rating}>★ {seller.rating?.toFixed(1) ?? '5.0'}</Text>
-            <Text style={styles.reviews}>(12)</Text>
+            <Text style={styles.rating}>★ {sellerRating?.averageRating.toFixed(1) ?? seller.rating?.toFixed(1) ?? '5.0'}</Text>
+            <Text style={styles.reviews}>({sellerRating?.totalReviews ?? 0})</Text>
           </View>
           <View style={styles.infoRow}>
             <Ionicons name="calendar-outline" size={14} color="#aaa" style={{ marginRight: 6 }} />
@@ -100,8 +114,8 @@ export default function ProductSellerCard({ seller, onFollow, onPress }: Product
             <View key={item.id} style={{ backgroundColor: '#f8f9fa', borderRadius: 8, padding: 10, marginBottom: 8 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                 {renderStars(item.rating)}
-                <Text style={{ marginLeft: 8, fontWeight: '600', color: '#008080', fontSize: 14 }}>{item.author}</Text>
-                <Text style={{ marginLeft: 8, color: '#aaa', fontSize: 12 }}>{item.date}</Text>
+                <Text style={{ marginLeft: 8, fontWeight: '600', color: '#008080', fontSize: 14 }}>{item.buyerName || 'Anonyme'}</Text>
+                <Text style={{ marginLeft: 8, color: '#aaa', fontSize: 12 }}>{new Date(item.createdAt).toLocaleDateString('fr-FR')}</Text>
               </View>
               <Text style={{ color: '#333', fontSize: 15, marginTop: 2 }}>{item.comment}</Text>
             </View>

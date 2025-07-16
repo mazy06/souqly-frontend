@@ -2,6 +2,7 @@ import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/
 import SearchScreen from '../screens/SearchScreen';
 import CategoryScreen from '../screens/CategoryScreen';
 import SearchResultsScreen from '../screens/SearchResultsScreen';
+import SearchArticlesListScreen from '../screens/SearchArticlesListScreen';
 
 const Stack = createStackNavigator();
 
@@ -17,6 +18,7 @@ export default function SearchStack() {
       <Stack.Screen name="SearchMain" component={SearchScreen} />
       <Stack.Screen name="Category" component={CategoryScreen} />
       <Stack.Screen name="SearchResults" component={SearchResultsScreen} />
+      <Stack.Screen name="ArticlesList" component={SearchArticlesListScreen} />
     </Stack.Navigator>
   );
 } 

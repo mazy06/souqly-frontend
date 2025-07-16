@@ -1,10 +1,15 @@
 import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
-import ArticlesListScreen from '../screens/ArticlesListScreen';
 import ProductDetailScreen from '../screens/ProductDetailScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import ProductImagesScreen from '../screens/ProductImagesScreen';
-import HomeScreen2 from '../screens/HomeScreen2';
+import HomeScreen from '../screens/HomeScreen';
 import ProfileDetailScreen from '../screens/ProfileDetailScreen';
+import SearchResultsScreen from '../screens/SearchResultsScreen';
+import PaymentScreen from '../screens/PaymentScreen';
+import PaymentSuccessScreen from '../screens/PaymentSuccessScreen';
+import OrdersScreen from '../screens/OrdersScreen';
+import AuthLandingScreen from '../screens/AuthLandingScreen';
+import ReviewScreen from '../screens/ReviewScreen';
 
 const Stack = createStackNavigator();
 
@@ -17,12 +22,17 @@ export default function HomeStack() {
         gestureEnabled: true,
       }}
     >
-      <Stack.Screen name="ArticlesList" component={ArticlesListScreen} />
+      <Stack.Screen name="HomeMain" component={HomeScreen} />
       <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
       <Stack.Screen name="Favorites" component={FavoritesScreen} options={{ title: 'Favoris' }} />
       <Stack.Screen name="ProductImages" component={ProductImagesScreen} />
-      <Stack.Screen name="HomeMain" component={HomeScreen2} />
       <Stack.Screen name="ProfileDetail" component={ProfileDetailScreen} />
+      <Stack.Screen name="SearchResults" component={SearchResultsScreen} />
+      <Stack.Screen name="Payment" component={PaymentScreen} />
+      <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} />
+      <Stack.Screen name="Orders" component={OrdersScreen} />
+      <Stack.Screen name="Review" component={ReviewScreen} />
+      <Stack.Screen name="AuthLanding" component={AuthLandingScreen} />
     </Stack.Navigator>
   );
 } 

@@ -11,29 +11,18 @@ import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/nativ
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useFavorites } from '../hooks/useFavorites';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as ImagePicker from 'expo-image-picker';
 import { getImageUrl } from '../constants/Config';
-import SearchBar from '../components/SearchBar';
-import FilterChips from '../components/FilterChips';
+import SearchHeader from '../components/SearchHeader';
 
 // Types pour la navigation
-export type ArticlesListStackParamList = {
-  ArticlesListMain: { categoryId?: number; categoryName?: string };
+export type SearchArticlesListStackParamList = {
+  SearchArticlesList: undefined;
   ProductDetail: { productId: string };
 };
 
-function FavoritesScreen() {
-  const { colors } = useTheme();
-  return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text style={{ fontSize: 20, color: colors.text }}>Vos articles favoris apparaîtront ici.</Text>
-    </View>
-  );
-}
-
-export default function ArticlesListScreen() {
-  console.log('[ArticlesListScreen] rendu');
-  const navigation = useNavigation<StackNavigationProp<ArticlesListStackParamList>>();
+export default function SearchArticlesListScreen() {
+  console.log('[SearchArticlesListScreen] rendu');
+  const navigation = useNavigation<StackNavigationProp<SearchArticlesListStackParamList>>();
   const route = useRoute();
   const { logout, isGuest, isAuthenticated } = useAuth();
   const { colors } = useTheme();
@@ -41,8 +30,6 @@ export default function ArticlesListScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState('Voir tout');
   const [currentPage, setCurrentPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -168,106 +155,6 @@ export default function ArticlesListScreen() {
     }
   };
 
-  const handleSearchSubmit = async () => {
-    try {
-      setLoading(true);
-      const response = await ProductService.getProducts({ search });
-      setProducts(response.content || []);
-      setError(null);
-    } catch (err) {
-      setError('Erreur lors de la recherche.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCameraPress = async () => {
-    const pickImage = async (fromCamera: boolean) => {
-      let result;
-      if (fromCamera) {
-        const { status } = await ImagePicker.requestCameraPermissionsAsync();
-        if (status !== 'granted') {
-          Alert.alert('Permission refusée', "L'application a besoin de la permission d'utiliser la caméra.");
-          return;
-        }
-        result = await ImagePicker.launchCameraAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          allowsEditing: false,
-          quality: 0.7,
-        });
-      } else {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
-          Alert.alert('Permission refusée', "L'application a besoin de la permission d'accéder à la galerie.");
-          return;
-        }
-        result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          allowsEditing: false,
-          quality: 0.7,
-        });
-      }
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const photoUri = result.assets[0].uri;
-        try {
-          setLoading(true);
-          const formData = new FormData();
-          formData.append('image', {
-            uri: photoUri,
-            name: 'photo.jpg',
-            type: 'image/jpeg',
-          } as any);
-          // TODO: Recherche par similarité d'image
-          // À terme, l'URL ci-dessous devra pointer vers un microservice Python (Flask/FastAPI)
-          // qui :
-          //   1. Extrait les features de l'image envoyée (embedding via un modèle CNN)
-          //   2. Compare cet embedding à ceux des images produits en base
-          //   3. Retourne les produits les plus similaires (par distance)
-          // Le backend Java devra relayer la requête et retourner la liste des produits similaires
-          const response = await fetch('https://ton-backend/api/products/search-by-image', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'multipart/form-data',
-              // Ajoute l'auth si besoin
-            },
-            body: formData,
-          });
-          if (!response.ok) throw new Error('Erreur lors de la recherche par image');
-          const data = await response.json();
-          setProducts(data.products || []);
-          setError(null);
-        } catch (err) {
-          setError('Erreur lors de la recherche par image.');
-        } finally {
-          setLoading(false);
-        }
-      }
-    };
-
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: ['Annuler', 'Prendre une photo', 'Choisir dans la galerie'],
-          cancelButtonIndex: 0,
-        },
-        (buttonIndex) => {
-          if (buttonIndex === 1) pickImage(true);
-          else if (buttonIndex === 2) pickImage(false);
-        }
-      );
-    } else {
-      Alert.alert(
-        'Recherche par image',
-        'Choisissez une option',
-        [
-          { text: 'Prendre une photo', onPress: () => pickImage(true) },
-          { text: 'Choisir dans la galerie', onPress: () => pickImage(false) },
-          { text: 'Annuler', style: 'cancel' },
-        ]
-      );
-    }
-  };
-
   const renderProduct = ({ item }: { item: Product }) => (
     <ProductCard
       title={item.title}
@@ -359,15 +246,8 @@ export default function ArticlesListScreen() {
         renderItem={renderProduct}
         ListHeaderComponent={
           <View>
+            <SearchHeader title="Tous les articles" />
             <VisitorBadge onSignup={() => logout()} />
-            <SearchBar 
-              value={search} 
-              onChangeText={setSearch}
-              onPressCamera={handleCameraPress}
-              onSubmit={handleSearchSubmit}
-            />
-            <FilterChips selected={selectedFilter} onSelect={setSelectedFilter} />
-            <Text style={{ color: colors.text, fontWeight: 'bold', fontSize: 20, margin: 8 }}>Recommandé pour toi</Text>
           </View>
         }
         showsVerticalScrollIndicator={false}
@@ -380,7 +260,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-
   authContainer: {
     flex: 1,
     justifyContent: 'center',

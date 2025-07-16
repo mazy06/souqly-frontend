@@ -6,13 +6,14 @@ import EnhancedSearchBar from '../components/EnhancedSearchBar';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import CategoryService, { Category } from '../services/CategoryService';
 import { useTheme } from '../contexts/ThemeContext';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Types pour la navigation
 export type SearchStackParamList = {
   SearchMain: undefined;
   Category: { categoryKey: string; categoryLabel: string };
   SearchResults: { query: string };
+  ArticlesList: undefined;
 };
 
 interface CategoryListItemProps {
@@ -52,7 +53,6 @@ export default function SearchScreen() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation<StackNavigationProp<SearchStackParamList>>();
-  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     loadCategories();
@@ -83,6 +83,11 @@ export default function SearchScreen() {
     });
   };
 
+  const handleAllProductsPress = () => {
+    // Navigation vers ArticlesList dans le même stack
+    navigation.navigate('ArticlesList');
+  };
+
   const handleSearchSubmit = async () => {
     if (search.trim()) {
       console.log('[SearchScreen] Recherche soumise:', search);
@@ -92,7 +97,7 @@ export default function SearchScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}> 
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top','left','right']}>
       <View style={styles.header}>
         <EnhancedSearchBar 
           value={search} 
@@ -119,9 +124,24 @@ export default function SearchScreen() {
           )}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            <TouchableOpacity 
+              style={[styles.allProductsItem, { borderBottomColor: colors.border }]} 
+              onPress={handleAllProductsPress}
+              activeOpacity={0.7}
+            >
+              <View style={styles.icon}>
+                <MaterialCommunityIcons name="view-grid" size={26} color={colors.primary} />
+              </View>
+              <Text style={[styles.allProductsLabel, { color: colors.text }]}>
+                Tous les biens
+              </Text>
+              <Ionicons name="chevron-forward" size={22} color={colors.text + '99'} style={styles.chevron} />
+            </TouchableOpacity>
+          }
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -177,5 +197,18 @@ const styles = StyleSheet.create({
   },
   chevron: {
     marginLeft: 4,
+  },
+  allProductsItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    backgroundColor: 'transparent',
+  },
+  allProductsLabel: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '600',
   },
 }); 

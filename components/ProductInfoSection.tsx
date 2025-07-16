@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { formatAmount } from '../utils/formatters';
 
 interface ProductInfoSectionProps {
   price: number;
@@ -27,11 +28,11 @@ export default function ProductInfoSection({
     <View style={styles.container}>
       {/* Prix */}
       <View style={styles.priceSection}>
-        <Text style={styles.price}>{price.toFixed(2)} €</Text>
+        <Text style={styles.price}>{formatAmount(price)}</Text>
         {priceWithFees && (
           <View style={styles.priceProtectionRow}>
             <Text style={styles.priceWithProtection}>
-              {priceWithFees.toFixed(2)} € Inclut la Protection acheteurs
+              {formatAmount(priceWithFees)} Inclut la Protection acheteurs
             </Text>
             <Ionicons name="shield-checkmark" size={16} color="#00BFA6" style={styles.shieldIcon} />
           </View>

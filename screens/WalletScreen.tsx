@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import ApiService from '../services/ApiService';
 import { useAuth } from '../contexts/AuthContext';
 import WalletService, { WalletOperation } from '../services/WalletService';
+import { formatAmount } from '../utils/formatters';
 
 type OperationType = 'all' | 'earnings' | 'expenses' | 'transfers';
 
@@ -49,7 +50,7 @@ export default function WalletScreen() {
   };
 
   const formatBalance = (amount: number) => {
-    return amount.toFixed(2).replace('.', ',');
+    return formatAmount(amount);
   };
 
   const formatDate = (dateString: string) => {
@@ -134,7 +135,7 @@ export default function WalletScreen() {
           styles.operationAmount,
           { color: item.type === 'earning' ? '#4CAF50' : '#F44336' }
         ]}>
-          {item.type === 'earning' ? '+' : '-'}{formatBalance(item.amount)} €
+          {item.type === 'earning' ? '+' : '-'}{formatAmount(item.amount)}
         </Text>
         <View style={[styles.statusBadge, { backgroundColor: item.status === 'completed' ? '#4CAF50' : '#FF9800' }]}>
           <Text style={styles.statusText}>
@@ -184,7 +185,7 @@ export default function WalletScreen() {
             </View>
             <View style={styles.balanceInfo}>
               <Text style={[styles.balanceAmount, { color: colors.text }]}>
-                {formatBalance(balance)} €
+                {formatBalance(balance)}
               </Text>
               <Text style={[styles.balanceLabel, { color: colors.textSecondary }]}>
                 Solde disponible

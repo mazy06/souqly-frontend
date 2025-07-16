@@ -19,5 +19,6 @@ COPY . .
 # Exposer le port pour Expo
 EXPOSE 19006
 
-# Commande pour démarrer l'application avec l'émulateur iOS
-CMD ["npm", "start", "--", "--ios"] 
+# Commande pour démarrer l'application en mode développement
+# L'utilisateur pourra choisir la plateforme via l'interface Expo
+CMD ["npm", "start"] 

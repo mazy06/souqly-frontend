@@ -10,6 +10,7 @@ interface ProductActionsProps {
   productPrice?: number;
   onSendOffer?: (offerData: { price: number; message: string }) => void;
   isOwnProduct?: boolean;
+  productStatus?: string;
 }
 
 const { height: screenHeight } = Dimensions.get('window');
@@ -21,7 +22,8 @@ export default function ProductActions({
   sellerName = 'Vendeur',
   productPrice = 0,
   onSendOffer,
-  isOwnProduct = false
+  isOwnProduct = false,
+  productStatus
 }: ProductActionsProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [offerPrice, setOfferPrice] = useState('');
@@ -85,6 +87,9 @@ export default function ProductActions({
       })
     : COMPACT_HEIGHT;
 
+  // Vérifier si le produit est vendu
+  const isSold = productStatus === 'sold' || productStatus === 'SOLD';
+
   return (
     <Animated.View style={[styles.container, { height: containerHeight }]}>
       <KeyboardAvoidingView 
@@ -96,20 +101,29 @@ export default function ProductActions({
           <View style={styles.actionsBar}>
             {!isOwnProduct ? (
               <>
-                <TouchableOpacity
-                  style={[styles.offerBtn, isDisabled && styles.disabledBtn]}
-                  onPress={handleOfferPress}
-                  disabled={isDisabled}
-                >
-                  <Text style={[styles.offerBtnText, isDisabled && styles.disabledText]}>Faire une offre</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.buyBtn, isDisabled && styles.disabledBtn]}
-                  onPress={onBuy}
-                  disabled={isDisabled}
-                >
-                  <Text style={styles.buyBtnText}>Acheter</Text>
-                </TouchableOpacity>
+                {isSold ? (
+                  <View style={styles.soldMessage}>
+                    <Ionicons name="checkmark-circle" size={20} color="#ff6b6b" />
+                    <Text style={styles.soldMessageText}>Article vendu</Text>
+                  </View>
+                ) : (
+                  <>
+                    <TouchableOpacity
+                      style={[styles.offerBtn, isDisabled && styles.disabledBtn]}
+                      onPress={handleOfferPress}
+                      disabled={isDisabled}
+                    >
+                      <Text style={[styles.offerBtnText, isDisabled && styles.disabledText]}>Faire une offre</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.buyBtn, isDisabled && styles.disabledBtn]}
+                      onPress={onBuy}
+                      disabled={isDisabled}
+                    >
+                      <Text style={styles.buyBtnText}>Acheter</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
               </>
             ) : (
               <View style={styles.ownProductMessage}>
@@ -314,5 +328,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#666',
     fontStyle: 'italic',
+  },
+  soldMessage: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  soldMessageText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ff6b6b',
   },
 }); 

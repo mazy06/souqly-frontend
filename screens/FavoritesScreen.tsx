@@ -11,6 +11,7 @@ import { useFavorites } from '../hooks/useFavorites';
 import GuestMessage from '../components/GuestMessage';
 import SectionHeader from '../components/SectionHeader';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import SearchHeader from '../components/SearchHeader';
 
 
 // Types pour la navigation
@@ -175,25 +176,27 @@ export default function FavoritesScreen() {
           />
         </View>
       ) : (
-        // ... FlatList des favoris comme avant
-        <FlatList
-          data={favorites}
-          keyExtractor={item => item.id.toString()}
-          numColumns={2}
-          contentContainerStyle={styles.gridContent}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          renderItem={renderProduct}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Ionicons name="heart-outline" size={64} color={colors.tabIconDefault} />
-              <Text style={[styles.emptyText, { color: colors.text }]}>Aucun favori pour le moment</Text>
-              <Text style={[styles.emptySubtext, { color: colors.tabIconDefault }]}>Ajoutez des articles à vos favoris pour les retrouver ici</Text>
-            </View>
-          }
-          showsVerticalScrollIndicator={false}
-        />
+        <>
+          <SearchHeader title="Mes favoris" showBackButton={false} />
+          <FlatList
+            data={favorites}
+            keyExtractor={item => item.id.toString()}
+            numColumns={2}
+            contentContainerStyle={styles.gridContent}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            renderItem={renderProduct}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Ionicons name="heart-outline" size={64} color={colors.tabIconDefault} />
+                <Text style={[styles.emptyText, { color: colors.text }]}>Aucun favori pour le moment</Text>
+                <Text style={[styles.emptySubtext, { color: colors.tabIconDefault }]}>Ajoutez des articles à vos favoris pour les retrouver ici</Text>
+              </View>
+            }
+            showsVerticalScrollIndicator={false}
+          />
+        </>
       )}
     </SafeAreaView>
   );

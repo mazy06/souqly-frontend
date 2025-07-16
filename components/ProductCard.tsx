@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AdaptiveImage from './AdaptiveImage';
@@ -11,13 +11,17 @@ type Props = {
   condition?: string;
   price: string;
   priceWithFees?: string;
-  image: string;
+  image: string | null;
   onPress?: () => void;
   likes?: number;
   isPro?: boolean;
   isFavorite?: boolean;
   onFavoritePress?: () => void;
+  status?: string;
 };
+
+// Cache local pour les images déjà chargées
+const imageCache = new Map<string, string | null>();
 
 export default function ProductCard({ 
   title, 
@@ -31,17 +35,64 @@ export default function ProductCard({
   likes = 0, 
   isPro = false,
   isFavorite = false,
-  onFavoritePress
+  onFavoritePress,
+  status
 }: Props) {
   const { colors } = useTheme();
+  const [currentImage, setCurrentImage] = useState<string | null>(image);
+  
+  // Debug log
+  if (__DEV__) {
+    console.log('[DEBUG] ProductCard - Titre:', title, 'Likes:', likes, 'Image:', image);
+  }
+
+  // Mettre à jour l'image quand elle change
+  useEffect(() => {
+    if (image !== currentImage) {
+      setCurrentImage(image);
+    }
+  }, [image]);
+
+  // Utiliser le cache pour éviter de recharger les mêmes images
+  const cachedImage = useMemo(() => {
+    if (!image) return null;
+    
+    if (imageCache.has(image)) {
+      return imageCache.get(image);
+    }
+    
+    // Ajouter au cache
+    imageCache.set(image, image);
+    return image;
+  }, [image]);
 
   return (
     <TouchableOpacity style={[styles.card, { backgroundColor: colors.card }]} onPress={onPress} activeOpacity={0.85}>
       <View style={[styles.imageContainer, { backgroundColor: colors.border }]}>
-        <AdaptiveImage source={{ uri: image }} style={styles.image} alt={title} />
+        {cachedImage ? (
+          <AdaptiveImage 
+            source={{ uri: cachedImage }} 
+            style={styles.image} 
+            alt={title}
+            onError={(error) => {
+              console.log('[DEBUG] Erreur chargement image:', cachedImage, error);
+              // Marquer comme échoué dans le cache
+              imageCache.set(cachedImage, null);
+            }}
+          />
+        ) : (
+          <View style={[styles.image, { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' }]}>
+            <Text style={{ color: '#999', fontSize: 12 }}>Pas d'image</Text>
+          </View>
+        )}
         {isPro && (
           <View style={[styles.proBadge, { backgroundColor: colors.primary }]}>
             <Text style={styles.proText}>Pro</Text>
+          </View>
+        )}
+        {status === 'sold' && (
+          <View style={[styles.soldBadge, { backgroundColor: '#ff6b6b' }]}>
+            <Text style={styles.soldText}>Vendu</Text>
           </View>
         )}
         <TouchableOpacity 
@@ -99,6 +150,19 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   proText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+  soldBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  soldText: {
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 12,
