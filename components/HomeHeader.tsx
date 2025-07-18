@@ -19,7 +19,7 @@ export default function HomeHeader({
   onSearchSubmit,
   onCameraPress,
   selectedFilter,
-  onFilterSelect
+  onFilterSelect,
 }: HomeHeaderProps) {
   const { colors } = useTheme();
 

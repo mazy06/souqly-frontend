@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, ScrollView, StyleSheet, RefreshControl, ActivityIndicator, Alert, Text } from 'react-native';
+import { View, ScrollView, StyleSheet, RefreshControl, ActivityIndicator, Alert, Text, TouchableOpacity, FlatList } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,10 +7,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useFavorites } from '../hooks/useFavorites';
 import ProductService, { Product } from '../services/ProductService';
+import CategoryService, { Category } from '../services/CategoryService';
 import HomeHeader from '../components/HomeHeader';
 import HorizontalProductList from '../components/HorizontalProductList';
 import PromotionalBanner from '../components/PromotionalBanner';
 import VisitorBadge from '../components/VisitorBadge';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
 // Types pour la navigation
@@ -19,6 +21,9 @@ export type HomeStackParamList = {
   ProductDetail: { productId: string };
   ArticlesList: undefined;
   SearchResults: { query: string; category?: string };
+  Category: { categoryKey: string; categoryLabel: string };
+  CategoriesGrid: undefined;
+  Filters: undefined;
 };
 
 export default function HomeScreen() {
@@ -30,7 +35,7 @@ export default function HomeScreen() {
   
   // États pour la recherche et filtres
   const [search, setSearch] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState('Voir tout');
+  const [selectedFilter, setSelectedFilter] = useState('all');
   
   // États pour les données
   const [loading, setLoading] = useState(true);
@@ -47,28 +52,54 @@ export default function HomeScreen() {
   const [featuredCategories, setFeaturedCategories] = useState<{
     [category: string]: Product[]
   }>({});
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
 
-  // Fonction pour filtrer les produits par catégorie
+  // Fonction pour filtrer les produits selon les nouveaux filtres de recherche
   const getFilteredProducts = (products: Product[], filter: string) => {
-    if (filter === 'Voir tout') return products;
+    if (filter === 'all') return products;
     
-    const filterMap: { [key: string]: string[] } = {
-      'Femmes': ['femmes', 'vêtements-femmes', 'accessoires-femmes'],
-      'Hommes': ['hommes', 'vêtements-hommes', 'accessoires-hommes'],
-      'Articles de créateurs': ['créateurs', 'artisanat', 'design'],
-      'Enfants': ['enfants', 'bébé', 'jouets'],
-      'Maison': ['maison', 'décoration', 'jardin'],
-      'Électronique': ['électronique', 'informatique', 'téléphonie']
-    };
-    
-    const categories = filterMap[filter] || [];
-    return products.filter(product => 
-      categories.some(cat => 
-        product.category?.label?.toLowerCase().includes(cat.toLowerCase()) ||
-        product.category?.categoryKey?.toLowerCase().includes(cat.toLowerCase()) ||
-        product.title?.toLowerCase().includes(cat.toLowerCase())
-      )
-    );
+    switch (filter) {
+      case 'recent':
+        // Trier par date de création (plus récents en premier)
+        return [...products].sort((a, b) => 
+          new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+        );
+      
+      case 'popular':
+        // Trier par nombre de favoris (plus populaires en premier)
+        return [...products].sort((a, b) => 
+          (favoriteCounts[b.id] || 0) - (favoriteCounts[a.id] || 0)
+        );
+      
+      case 'nearby':
+        // Filtrer les produits avec localisation (pour l'instant, retourner tous)
+        return products.filter(product => product.city);
+      
+      case 'new':
+        // Produits créés dans les 7 derniers jours
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+        return products.filter(product => {
+          const createdAt = new Date(product.createdAt || 0);
+          return createdAt > oneWeekAgo;
+        });
+      
+      case 'promo':
+        // Produits avec prix réduit (pour l'instant, retourner tous)
+        return products; // TODO: Implémenter quand originalPrice sera disponible
+      
+      case 'verified':
+        // Produits de vendeurs vérifiés (pour l'instant, retourner tous)
+        return products; // TODO: Implémenter quand verified sera disponible
+      
+      case 'urgent':
+        // Produits marqués comme urgents (pour l'instant, retourner tous)
+        return products; // TODO: Implémenter quand urgent sera disponible
+      
+      default:
+        return products;
+    }
   };
 
   const loadHomeData = async () => {
@@ -83,7 +114,7 @@ export default function HomeScreen() {
       setIsInitialLoad(false);
       
       // Charger toutes les données en parallèle pour améliorer les performances
-      const [favoritesList, recentResponse, featuredData] = await Promise.allSettled([
+      const [favoritesList, recentResponse, featuredData, categoriesData] = await Promise.allSettled([
         // Charger les favoris (si connecté)
         isAuthenticated && !isGuest ? ProductService.getFavorites() : Promise.resolve([]),
         
@@ -114,7 +145,10 @@ export default function HomeScreen() {
           });
           
           return featuredData;
-        })()
+        })(),
+        
+        // Charger les catégories
+        CategoryService.getCategoryTree()
       ]);
       
       // Traiter les résultats
@@ -128,6 +162,10 @@ export default function HomeScreen() {
       
       if (featuredData.status === 'fulfilled') {
         setFeaturedCategories(featuredData.value);
+      }
+
+      if (categoriesData.status === 'fulfilled') {
+        setCategories(categoriesData.value);
       }
 
       // Charger les URLs des images et les compteurs de favoris en parallèle
@@ -149,6 +187,7 @@ export default function HomeScreen() {
       console.error('Erreur chargement données accueil:', error);
     } finally {
       setLoading(false);
+      setCategoriesLoading(false);
     }
   };
 
@@ -334,7 +373,11 @@ export default function HomeScreen() {
   };
 
   const handleViewAllRecent = () => {
-    navigation.navigate('ArticlesList');
+    // Navigation vers l'écran de recherche avec le filtre actuel
+    navigation.navigate('SearchResults', { 
+      query: '', 
+      category: selectedFilter !== 'Voir tout' ? selectedFilter : undefined 
+    });
   };
 
   const handleViewAllCategory = (category: string) => {
@@ -389,6 +432,46 @@ export default function HomeScreen() {
           subtitle="Les meilleures offres vous attendent"
           onPress={() => navigation.navigate('ArticlesList')}
         />
+
+        {/* Section Catégories */}
+        {categories.length > 0 && (
+          <View style={styles.categoriesSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Catégories</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('CategoriesGrid')}>
+                <Text style={[styles.viewAllText, { color: colors.primary }]}>Voir tout</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll}>
+              {categories.slice(0, 6).map((category) => (
+                <TouchableOpacity
+                  key={category.id}
+                  style={[styles.categoryCardHorizontal, { backgroundColor: colors.card }]}
+                  onPress={() => navigation.navigate('Category', {
+                    categoryKey: category.key,
+                    categoryLabel: category.label
+                  })}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.categoryIcon, { backgroundColor: colors.background }]}> 
+                    <MaterialCommunityIcons 
+                      name={category.iconName as any || 'tag-outline'} 
+                      size={28} 
+                      color={colors.primary} 
+                    />
+                  </View>
+                  <Text 
+                    style={[styles.categoryLabel, { color: colors.text, maxWidth: 80 }]} 
+                    numberOfLines={1} 
+                    ellipsizeMode="tail"
+                  >
+                    {category.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
 
         {/* Coups de cœur */}
         {isAuthenticated && !isGuest && favorites.length > 0 && (
@@ -484,5 +567,69 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  categoriesSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  viewAllText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  categoriesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  categoryCard: {
+    width: '30%',
+    aspectRatio: 1,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  categoryIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  categoryIconText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  categoryLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  categoriesScroll: {
+    flexDirection: 'row',
+    marginBottom: 8,
+    paddingLeft: 2,
+  },
+  categoryCardHorizontal: {
+    width: 90,
+    marginRight: 12,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 }); 

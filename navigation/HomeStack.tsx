@@ -10,6 +10,10 @@ import PaymentSuccessScreen from '../screens/PaymentSuccessScreen';
 import OrdersScreen from '../screens/OrdersScreen';
 import AuthLandingScreen from '../screens/AuthLandingScreen';
 import ReviewScreen from '../screens/ReviewScreen';
+import ArticlesListScreen from '../screens/ArticlesListScreen';
+import CategoryScreen from '../screens/CategoryScreen';
+import CategoriesGridScreen from '../screens/CategoriesGridScreen';
+import FiltersScreen from '../screens/FiltersScreen';
 
 const Stack = createStackNavigator();
 
@@ -28,6 +32,10 @@ export default function HomeStack() {
       <Stack.Screen name="ProductImages" component={ProductImagesScreen} />
       <Stack.Screen name="ProfileDetail" component={ProfileDetailScreen} />
       <Stack.Screen name="SearchResults" component={SearchResultsScreen} />
+      <Stack.Screen name="Category" component={CategoryScreen} />
+      <Stack.Screen name="CategoriesGrid" component={CategoriesGridScreen} />
+      <Stack.Screen name="ArticlesList" component={ArticlesListScreen} />
+      <Stack.Screen name="Filters" component={FiltersScreen} />
       <Stack.Screen name="Payment" component={PaymentScreen} />
       <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} />
       <Stack.Screen name="Orders" component={OrdersScreen} />

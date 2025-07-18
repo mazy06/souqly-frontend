@@ -55,6 +55,7 @@ export interface CreateProductRequest {
   imageIds: number[];
   city?: string;
   country?: string;
+  boost?: boolean;
 }
 
 export interface ProductFilters {
@@ -276,6 +277,7 @@ class ProductService {
     if (filters.page) queryParams.append('page', filters.page.toString());
     if (filters.pageSize) queryParams.append('pageSize', filters.pageSize.toString());
     const url = `${this.baseUrl}/cacheable?${queryParams.toString()}`;
+    
     return ApiService.get(url, false);
   }
 

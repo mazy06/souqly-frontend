@@ -1,7 +1,6 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import HomeStack from './HomeStack';
-import SearchStack from './SearchStack';
 import FavoritesStack from './FavoritesStack';
 import SellStack from './SellStack';
 import MessagesStack from './MessagesStack';
@@ -32,7 +31,6 @@ export default function TabNavigator() {
       })}
     >
       <Tab.Screen name="Accueil" component={HomeStack} />
-      <Tab.Screen name="Rechercher" component={SearchStack} />
       <Tab.Screen name="Favoris" component={FavoritesStack} />
       <Tab.Screen name="Vendre" component={SellStack} />
       <Tab.Screen name="Messages" component={MessagesStack} />

@@ -31,7 +31,7 @@ export default function EnhancedSearchBar({
   placeholder = "Rechercher un article ou un membre",
   showSuggestions = true,
 }: EnhancedSearchBarProps) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [showSuggestionsList, setShowSuggestionsList] = useState(false);
@@ -111,7 +111,14 @@ export default function EnhancedSearchBar({
 
   return (
     <View style={styles.container}>
-      <View style={[styles.searchBar, { backgroundColor: colors.card }]}>
+      <View style={[
+        styles.searchBar, 
+        { 
+          backgroundColor: isDark ? '#2a2a2a' : '#f8f9fa',
+          borderColor: colors.border + '40',
+          shadowColor: colors.text + '15',
+        }
+      ]}>
         <Ionicons name="search" size={20} color={colors.tabIconDefault} style={styles.icon} />
         <TextInput
           style={[styles.input, { color: colors.text }]}
@@ -156,17 +163,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 12,
-    paddingHorizontal: 12,
-    marginHorizontal: 8,
+    paddingHorizontal: 16,
+    marginHorizontal: 0,
     marginBottom: 10,
-    height: 44,
+    height: 48,
+    flex: 1,
+    borderWidth: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   icon: {
-    marginRight: 8,
+    marginRight: 12,
   },
   input: {
     flex: 1,
     fontSize: 16,
+    height: '100%',
   },
   loadingIcon: {
     marginLeft: 8,

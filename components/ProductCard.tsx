@@ -42,9 +42,7 @@ export default function ProductCard({
   const [currentImage, setCurrentImage] = useState<string | null>(image);
   
   // Debug log
-  if (__DEV__) {
-    console.log('[DEBUG] ProductCard - Titre:', title, 'Likes:', likes, 'Image:', image);
-  }
+  // console.log('[DEBUG] ProductCard - Titre:', title, 'Likes:', likes, 'Image:', image);
 
   // Mettre à jour l'image quand elle change
   useEffect(() => {

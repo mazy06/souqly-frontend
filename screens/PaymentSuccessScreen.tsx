@@ -19,18 +19,22 @@ type PaymentSuccessRouteProp = {
   productId?: string;
   sellerId?: number;
   sellerName?: string;
+  isBoost?: boolean;
 };
 
 export default function PaymentSuccessScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { productTitle, productPrice, transactionId, productId, sellerId, sellerName } = route.params as PaymentSuccessRouteProp;
+  const { productTitle, productPrice, transactionId, productId, sellerId, sellerName, isBoost } = route.params as PaymentSuccessRouteProp;
   const { colors } = useTheme();
 
   const handleContinueShopping = () => {
     console.log('[DEBUG] handleContinueShopping appelé avec:', { productId, sellerId, sellerName });
     
-    if (productId) {
+    if (isBoost) {
+      // Pour un boost, retourner à l'accueil
+      navigation.navigate('HomeMain');
+    } else if (productId) {
       // Si on a au moins l'ID du produit, on peut naviguer vers l'écran de notation
       navigation.navigate('Review', {
         productId,
@@ -45,8 +49,13 @@ export default function PaymentSuccessScreen() {
   };
 
   const handleViewOrders = () => {
-    // Navigation vers l'écran des commandes
-    navigation.navigate('Orders');
+    if (isBoost) {
+      // Pour un boost, naviguer vers les annonces publiées
+      navigation.navigate('SellMain');
+    } else {
+      // Navigation vers l'écran des commandes
+      navigation.navigate('Orders');
+    }
   };
 
   return (
@@ -70,7 +79,10 @@ export default function PaymentSuccessScreen() {
 
         {/* Message */}
         <Text style={[styles.message, { color: colors.textSecondary }]}>
-          Votre achat a été effectué avec succès. Vous recevrez bientôt un email de confirmation avec les détails de votre commande.
+          {isBoost 
+            ? 'Votre boost a été activé avec succès. Votre annonce sera mise en avant selon les options choisies.'
+            : 'Votre achat a été effectué avec succès. Vous recevrez bientôt un email de confirmation avec les détails de votre commande.'
+          }
         </Text>
 
         {/* Détails de la transaction */}
@@ -122,32 +134,65 @@ export default function PaymentSuccessScreen() {
             Prochaines étapes
           </Text>
           
-          <View style={styles.stepRow}>
-            <View style={[styles.stepIcon, { backgroundColor: colors.primary }]}>
-              <Ionicons name="mail" size={16} color="#fff" />
-            </View>
-            <Text style={[styles.stepText, { color: colors.text }]}>
-              Email de confirmation envoyé
-            </Text>
-          </View>
-          
-          <View style={styles.stepRow}>
-            <View style={[styles.stepIcon, { backgroundColor: colors.primary }]}>
-              <Ionicons name="time" size={16} color="#fff" />
-            </View>
-            <Text style={[styles.stepText, { color: colors.text }]}>
-              Le vendeur sera notifié de votre achat
-            </Text>
-          </View>
-          
-          <View style={styles.stepRow}>
-            <View style={[styles.stepIcon, { backgroundColor: colors.primary }]}>
-              <Ionicons name="car" size={16} color="#fff" />
-            </View>
-            <Text style={[styles.stepText, { color: colors.text }]}>
-              Livraison organisée par le vendeur
-            </Text>
-          </View>
+          {isBoost ? (
+            <>
+              <View style={styles.stepRow}>
+                <View style={[styles.stepIcon, { backgroundColor: colors.primary }]}>
+                  <Ionicons name="mail" size={16} color="#fff" />
+                </View>
+                <Text style={[styles.stepText, { color: colors.text }]}>
+                  Email de confirmation envoyé
+                </Text>
+              </View>
+              
+              <View style={styles.stepRow}>
+                <View style={[styles.stepIcon, { backgroundColor: colors.primary }]}>
+                  <Ionicons name="trending-up" size={16} color="#fff" />
+                </View>
+                <Text style={[styles.stepText, { color: colors.text }]}>
+                  Votre annonce sera mise en avant
+                </Text>
+              </View>
+              
+              <View style={styles.stepRow}>
+                <View style={[styles.stepIcon, { backgroundColor: colors.primary }]}>
+                  <Ionicons name="eye" size={16} color="#fff" />
+                </View>
+                <Text style={[styles.stepText, { color: colors.text }]}>
+                  Plus de visibilité dans les résultats
+                </Text>
+              </View>
+            </>
+          ) : (
+            <>
+              <View style={styles.stepRow}>
+                <View style={[styles.stepIcon, { backgroundColor: colors.primary }]}>
+                  <Ionicons name="mail" size={16} color="#fff" />
+                </View>
+                <Text style={[styles.stepText, { color: colors.text }]}>
+                  Email de confirmation envoyé
+                </Text>
+              </View>
+              
+              <View style={styles.stepRow}>
+                <View style={[styles.stepIcon, { backgroundColor: colors.primary }]}>
+                  <Ionicons name="time" size={16} color="#fff" />
+                </View>
+                <Text style={[styles.stepText, { color: colors.text }]}>
+                  Le vendeur sera notifié de votre achat
+                </Text>
+              </View>
+              
+              <View style={styles.stepRow}>
+                <View style={[styles.stepIcon, { backgroundColor: colors.primary }]}>
+                  <Ionicons name="car" size={16} color="#fff" />
+                </View>
+                <Text style={[styles.stepText, { color: colors.text }]}>
+                  Livraison organisée par le vendeur
+                </Text>
+              </View>
+            </>
+          )}
         </View>
       </ScrollView>
 
@@ -158,7 +203,7 @@ export default function PaymentSuccessScreen() {
           onPress={handleContinueShopping}
         >
           <Text style={styles.primaryButtonText}>
-            {productId ? 'Évaluer l\'achat' : 'Continuer les achats'}
+            {isBoost ? 'Retour à l\'accueil' : (productId ? 'Évaluer l\'achat' : 'Continuer les achats')}
           </Text>
         </TouchableOpacity>
         
@@ -167,7 +212,7 @@ export default function PaymentSuccessScreen() {
           onPress={handleViewOrders}
         >
           <Text style={[styles.secondaryButtonText, { color: colors.text }]}>
-            Voir mes commandes
+            {isBoost ? 'Voir mes annonces' : 'Voir mes commandes'}
           </Text>
         </TouchableOpacity>
       </View>

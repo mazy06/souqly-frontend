@@ -32,7 +32,16 @@ class ApiService {
     };
 
     try {
-      const response = await fetch(url, config);
+      // Ajouter un timeout plus long pour Docker
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 secondes
+
+      const response = await fetch(url, {
+        ...config,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
 
       // Si le token est expiré et qu'on a un refresh token, essayer de le renouveler
       if (response.status === 401 && requireAuth) {
@@ -54,6 +63,7 @@ class ApiService {
         console.log('🔍 ApiService - Erreur capturée:', error);
         console.log('🔍 ApiService - Type d\'erreur:', typeof error);
         console.log('🔍 ApiService - Message:', error instanceof Error ? error.message : String(error));
+        console.log('🔍 ApiService - URL tentée:', url);
       }
       throw error;
     }

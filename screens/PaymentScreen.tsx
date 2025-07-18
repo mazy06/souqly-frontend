@@ -23,12 +23,36 @@ type PaymentScreenRouteProp = {
   productPrice: number;
   productTitle: string;
   productImage?: string;
+  isBoost?: boolean;
+  boostData?: {
+    title: string;
+    description: string;
+    category: string;
+    brand: string;
+    size: string;
+    condition: string;
+    price: string;
+    imageIds: number[];
+    city?: string;
+    country?: string;
+    boost?: string;
+    boostDuration?: string;
+    boostPrice?: number;
+    extraPhotosQuantity?: number;
+    extraPhotosPrice?: number;
+    handoverMethods?: {
+      inPerson: boolean;
+      delivery: boolean;
+      pickup: boolean;
+    };
+    handoverAddress?: string;
+  };
 };
 
 export default function PaymentScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { productId, productPrice, productTitle, productImage } = route.params as PaymentScreenRouteProp;
+  const { productId, productPrice, productTitle, productImage, isBoost, boostData } = route.params as PaymentScreenRouteProp;
   const { colors } = useTheme();
   const { isAuthenticated, user } = useAuth();
 
@@ -71,10 +95,16 @@ export default function PaymentScreen() {
         setSelectedPaymentMethod(defaultMethod.id);
       }
       
-      // Charger les détails du produit
-      const productData = await ProductService.getProduct(parseInt(productId));
-      console.log('[DEBUG] Données du produit chargées:', productData);
-      setProduct(productData);
+      // Si c'est un boost, on n'a pas besoin de charger les détails du produit
+      if (isBoost) {
+        console.log('[DEBUG] Paiement pour un boost:', boostData);
+        setProduct(null);
+      } else {
+        // Charger les détails du produit
+        const productData = await ProductService.getProduct(parseInt(productId));
+        console.log('[DEBUG] Données du produit chargées:', productData);
+        setProduct(productData);
+      }
       
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
@@ -182,36 +212,86 @@ export default function PaymentScreen() {
     try {
       setProcessing(true);
 
-      const purchaseRequest: PurchaseRequest = {
-        productId: parseInt(productId),
-        paymentMethodId: selectedPaymentMethod,
-        amount: productPrice,
-      };
-
-      const result = await PaymentService.purchase(purchaseRequest);
-
-      if (result.success) {
-        // Navigation vers l'écran de succès
-        console.log('[DEBUG] Navigation vers PaymentSuccess avec:', {
-          productTitle,
-          productPrice,
-          transactionId: result.transactionId,
-          productId,
-          sellerId: product?.sellerId,
-          sellerName: product?.seller ? `${product.seller.firstName} ${product.seller.lastName}` : 'Vendeur'
-        });
+      if (isBoost && boostData) {
+        // Pour un boost, on publie directement l'annonce après le paiement
+        console.log('[DEBUG] Traitement du paiement pour un boost');
         
-        navigation.navigate('PaymentSuccess', {
-          productTitle,
-          productPrice,
-          transactionId: result.transactionId,
-          productId,
-          sellerId: product?.sellerId,
-          sellerName: product?.seller ? `${product.seller.firstName} ${product.seller.lastName}` : 'Vendeur'
-        });
+        // Simuler le paiement du boost
+        const simulatedResult = {
+          success: true,
+          transactionId: `boost_${Date.now()}`,
+          message: 'Boost payé avec succès'
+        };
+        
+        // Publier l'annonce avec le boost
+        try {
+          const price = parseFloat(boostData.price.replace(',', '.'));
+          const categoryId = parseInt(boostData.category);
+          
+          const productData = {
+            title: boostData.title.trim(),
+            description: boostData.description.trim(),
+            price: price,
+            brand: boostData.brand.trim() || undefined,
+            size: boostData.size || undefined,
+            condition: boostData.condition,
+            categoryId: categoryId,
+            imageIds: boostData.imageIds,
+            city: boostData.city,
+            country: boostData.country,
+            boost: boostData.boost === 'true',
+            boostDuration: boostData.boostDuration,
+            boostPrice: boostData.boostPrice,
+            extraPhotosQuantity: boostData.extraPhotosQuantity,
+            extraPhotosPrice: boostData.extraPhotosPrice,
+            handoverMethod: boostData.handoverMethods,
+            handoverAddress: boostData.handoverAddress,
+          };
+          
+          const result = await ProductService.createProduct(productData);
+          
+          // Retourner au SellScreen avec un message de succès
+          navigation.goBack();
+          
+        } catch (error) {
+          console.error('Erreur lors de la publication de l\'annonce:', error);
+          setError('Erreur lors de la publication de l\'annonce');
+          setTimeout(() => setError(null), 3000);
+        }
+        
       } else {
-        setError(result.message || 'Erreur lors de l\'achat');
-        setTimeout(() => setError(null), 3000);
+        // Paiement normal pour un produit
+        const purchaseRequest: PurchaseRequest = {
+          productId: parseInt(productId),
+          paymentMethodId: selectedPaymentMethod,
+          amount: productPrice,
+        };
+
+        const result = await PaymentService.purchase(purchaseRequest);
+
+        if (result.success) {
+          // Navigation vers l'écran de succès
+          console.log('[DEBUG] Navigation vers PaymentSuccess avec:', {
+            productTitle,
+            productPrice,
+            transactionId: result.transactionId,
+            productId,
+            sellerId: product?.sellerId,
+            sellerName: product?.seller ? `${product.seller.firstName} ${product.seller.lastName}` : 'Vendeur'
+          });
+          
+          navigation.navigate('PaymentSuccess', {
+            productTitle,
+            productPrice,
+            transactionId: result.transactionId,
+            productId,
+            sellerId: product?.sellerId,
+            sellerName: product?.seller ? `${product.seller.firstName} ${product.seller.lastName}` : 'Vendeur'
+          });
+        } else {
+          setError(result.message || 'Erreur lors de l\'achat');
+          setTimeout(() => setError(null), 3000);
+        }
       }
     } catch (error) {
       console.log('⚠️ Erreur lors de l\'achat, utilisation de la simulation:', error);
@@ -233,12 +313,13 @@ export default function PaymentScreen() {
       
       // Navigation vers l'écran de succès avec le résultat simulé
       navigation.navigate('PaymentSuccess', {
-        productTitle,
-        productPrice,
+        productTitle: isBoost ? `Boost pour "${boostData?.title || 'Annonce'}"` : productTitle,
+        productPrice: productPrice,
         transactionId: simulatedResult.transactionId,
-        productId,
-        sellerId: product?.sellerId,
-        sellerName: product?.seller ? `${product.seller.firstName} ${product.seller.lastName}` : 'Vendeur'
+        productId: isBoost ? 'boost' : productId,
+        sellerId: isBoost ? user?.id : product?.sellerId,
+        sellerName: isBoost ? (user ? `${user.name || 'Utilisateur'}` : 'Vous') : (product?.seller ? `${product.seller.firstName} ${product.seller.lastName}` : 'Vendeur'),
+        isBoost: isBoost || false
       });
     } finally {
       setProcessing(false);

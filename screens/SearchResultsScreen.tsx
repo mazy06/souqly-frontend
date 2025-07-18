@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../contexts/ThemeContext';
 import { useFavorites } from '../hooks/useFavorites';
@@ -13,9 +14,13 @@ interface SearchResultsRouteParams {
   category?: string;
 }
 
+type SearchResultsStackParamList = {
+  ProductDetail: { productId: string };
+};
+
 export default function SearchResultsScreen() {
   const route = useRoute();
-  const navigation = useNavigation();
+  const navigation = useNavigation<StackNavigationProp<SearchResultsStackParamList>>();
   const { colors } = useTheme();
   const { isFavorite, toggleFavorite } = useFavorites();
   
@@ -46,7 +51,13 @@ export default function SearchResultsScreen() {
       
       // Ajouter le filtre de catégorie si fourni
       if (category) {
-        filters.categoryId = category;
+        // Si c'est un ID numérique, l'utiliser directement
+        if (!isNaN(Number(category))) {
+          filters.categoryId = category;
+        } else {
+          // Sinon, c'est un filtre textuel, l'ajouter à la recherche
+          filters.search = query ? `${query} ${category}` : category;
+        }
       }
       
       const response = await ProductService.getProducts(filters);

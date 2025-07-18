@@ -30,7 +30,11 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
     <TouchableOpacity
       style={[
         styles.card,
-        { backgroundColor: cardBg, shadowColor: colors.text + '22', borderColor: colors.border },
+        { 
+          backgroundColor: cardBg, 
+          shadowColor: colors.text + '15', 
+          borderColor: colors.border + '20',
+        },
       ]}
       onPress={onPress}
       activeOpacity={0.85}
@@ -49,23 +53,50 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
             <View
               style={[
                 styles.avatar,
-                { backgroundColor: colors.primary + '22' },
+                { backgroundColor: colors.primary + '15' },
                 hasUnread && { borderColor: colors.primary, borderWidth: 2 },
                 { justifyContent: 'center', alignItems: 'center' },
               ]}
             >
-              <Ionicons name="person" size={22} color={colors.primary} />
+              <Ionicons name="person" size={18} color={colors.primary} />
             </View>
+          )}
+          {hasUnread && (
+            <View style={[styles.unreadIndicator, { backgroundColor: colors.primary }]} />
           )}
         </View>
         <View style={styles.infoWrapper}>
           <View style={styles.topRow}>
-            <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>{name}</Text>
+            <Text 
+              style={[
+                styles.name, 
+                { color: colors.text },
+                hasUnread && { fontWeight: '700' }
+              ]} 
+              numberOfLines={1}
+            >
+              {name}
+            </Text>
             <Text style={[styles.time, { color: colors.tabIconDefault }]}>{time}</Text>
           </View>
           <View style={styles.bottomRow}>
-            <Text style={[styles.lastMessage, { color: colors.tabIconDefault }]} numberOfLines={1}>{lastMessage}</Text>
-            {hasUnread && <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />}
+            <Text 
+              style={[
+                styles.lastMessage, 
+                { color: hasUnread ? colors.text : colors.tabIconDefault },
+                hasUnread && { fontWeight: '500' }
+              ]} 
+              numberOfLines={1}
+            >
+              {lastMessage}
+            </Text>
+            {hasUnread && (
+              <View style={[styles.unreadBadge, { backgroundColor: colors.primary }]}>
+                <Text style={styles.unreadBadgeText}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
       </View>
@@ -75,28 +106,39 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 16,
-    marginBottom: 12,
-    paddingVertical: 14,
+    borderRadius: 12,
+    marginBottom: 6,
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
-    borderWidth: 1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
+    borderWidth: 0.5,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   avatarWrapper: {
-    marginRight: 14,
+    marginRight: 12,
+    position: 'relative',
   },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#eee',
+  },
+  unreadIndicator: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: '#fff',
   },
   infoWrapper: {
     flex: 1,
@@ -108,30 +150,40 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   name: {
-    fontWeight: 'bold',
-    fontSize: 16,
+    fontWeight: '600',
+    fontSize: 15,
     flex: 1,
     marginRight: 8,
   },
   time: {
-    fontSize: 12,
-    minWidth: 48,
+    fontSize: 11,
+    minWidth: 40,
     textAlign: 'right',
+    fontWeight: '500',
   },
   bottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 2,
+    marginTop: 1,
   },
   lastMessage: {
-    fontSize: 15,
+    fontSize: 13,
     flex: 1,
+    lineHeight: 16,
   },
-  unreadDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginLeft: 8,
+  unreadBadge: {
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    marginLeft: 6,
+  },
+  unreadBadgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
 });
 
