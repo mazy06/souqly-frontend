@@ -10,6 +10,9 @@ import ProductService, { Product } from '../services/ProductService';
 import CategoryService, { Category } from '../services/CategoryService';
 import HomeHeader from '../components/HomeHeader';
 import HorizontalProductList from '../components/HorizontalProductList';
+import CategoryProductList from '../components/CategoryProductList';
+import SpecialProductList from '../components/SpecialProductList';
+import CategoryGrid from '../components/CategoryGrid';
 import PromotionalBanner from '../components/PromotionalBanner';
 import VisitorBadge from '../components/VisitorBadge';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -49,11 +52,72 @@ export default function HomeScreen() {
   const [recentSearches, setRecentSearches] = useState<Product[]>([]);
   const [recentlyViewed, setRecentlyViewed] = useState<Product[]>([]);
   const [recentProducts, setRecentProducts] = useState<Product[]>([]);
+  const [nearbyProducts, setNearbyProducts] = useState<Product[]>([]);
   const [featuredCategories, setFeaturedCategories] = useState<{
     [category: string]: Product[]
   }>({});
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
+
+  // Fonction pour charger les produits récemment vus
+  const loadRecentlyViewed = async (): Promise<Product[]> => {
+    try {
+      // Pour l'instant, retourner les produits récents
+      // TODO: Implémenter un vrai système de produits récemment vus
+      const response = await ProductService.getProductsCacheable({ 
+        page: 0, 
+        pageSize: 5,
+        sortBy: 'createdAt',
+        sortOrder: 'desc'
+      });
+      return response.content || [];
+    } catch (error) {
+      console.log('Erreur chargement produits récemment vus:', error);
+      return [];
+    }
+  };
+
+  // Fonction pour charger les produits basés sur les recherches récentes
+  const loadRecentSearches = async (): Promise<Product[]> => {
+    try {
+      // Pour l'instant, retourner des produits populaires
+      // TODO: Implémenter un vrai système de recommandations basé sur les recherches
+      const response = await ProductService.getProductsCacheable({ 
+        page: 0, 
+        pageSize: 5,
+        sortBy: 'favoriteCount',
+        sortOrder: 'desc'
+      });
+      return response.content || [];
+    } catch (error) {
+      console.log('Erreur chargement recherches récentes:', error);
+      return [];
+    }
+  };
+
+  // Fonction pour charger les produits locaux
+  const loadNearbyProducts = async (): Promise<Product[]> => {
+    try {
+      // Pour l'instant, retourner des produits avec localisation
+      // TODO: Implémenter un vrai système de géolocalisation
+      const response = await ProductService.getProductsCacheable({ 
+        page: 0, 
+        pageSize: 5,
+        sortBy: 'createdAt',
+        sortOrder: 'desc'
+      });
+      
+      // Filtrer les produits avec localisation
+      const nearbyProducts = (response.content || []).filter(product => 
+        product.city || product.locationName
+      );
+      
+      return nearbyProducts;
+    } catch (error) {
+      console.log('Erreur chargement produits locaux:', error);
+      return [];
+    }
+  };
 
   // Fonction pour filtrer les produits selon les nouveaux filtres de recherche
   const getFilteredProducts = (products: Product[], filter: string) => {
@@ -114,12 +178,17 @@ export default function HomeScreen() {
       setIsInitialLoad(false);
       
       // Charger toutes les données en parallèle pour améliorer les performances
-      const [favoritesList, recentResponse, featuredData, categoriesData] = await Promise.allSettled([
+      const [favoritesList, recentResponse, featuredData, categoriesData, recentlyViewedData, recentSearchesData, nearbyData] = await Promise.allSettled([
         // Charger les favoris (si connecté)
         isAuthenticated && !isGuest ? ProductService.getFavorites() : Promise.resolve([]),
         
-        // Charger les produits récents
-        ProductService.getProductsCacheable({ page: 0, pageSize: 10 }),
+        // Charger les produits récents (toutes catégories confondues)
+        ProductService.getProductsCacheable({ 
+          page: 0, 
+          pageSize: 10,
+          sortBy: 'createdAt',
+          sortOrder: 'desc'
+        }),
         
         // Charger les catégories mises en avant
         (async () => {
@@ -127,16 +196,8 @@ export default function HomeScreen() {
           const featuredData: {[category: string]: Product[]} = {};
           
           const categoryPromises = categories.map(async (category) => {
-            try {
-              const response = await ProductService.getProductsCacheable({ 
-                page: 0, 
-                pageSize: 5
-              });
-              return { category, products: response.content || [] };
-            } catch (error) {
-              console.log('Erreur chargement catégorie', category, ':', error);
-              return { category, products: [] };
-            }
+            const products = await loadProductsByCategory(category, 5);
+            return { category, products };
           });
           
           const results = await Promise.all(categoryPromises);
@@ -148,7 +209,16 @@ export default function HomeScreen() {
         })(),
         
         // Charger les catégories
-        CategoryService.getCategoryTree()
+        CategoryService.getCategoryTree(),
+        
+        // Charger les produits récemment vus
+        loadRecentlyViewed(),
+        
+        // Charger les produits basés sur les recherches récentes
+        loadRecentSearches(),
+
+        // Charger les produits locaux
+        loadNearbyProducts()
       ]);
       
       // Traiter les résultats
@@ -168,11 +238,26 @@ export default function HomeScreen() {
         setCategories(categoriesData.value);
       }
 
+      if (recentlyViewedData.status === 'fulfilled') {
+        setRecentlyViewed(recentlyViewedData.value);
+      }
+
+      if (recentSearchesData.status === 'fulfilled') {
+        setRecentSearches(recentSearchesData.value);
+      }
+
+      if (nearbyData.status === 'fulfilled') {
+        setNearbyProducts(nearbyData.value);
+      }
+
       // Charger les URLs des images et les compteurs de favoris en parallèle
       const allProducts = [
         ...(favoritesList.status === 'fulfilled' ? favoritesList.value : []),
         ...(recentResponse.status === 'fulfilled' ? recentResponse.value.content || [] : []),
-        ...(featuredData.status === 'fulfilled' ? Object.values(featuredData.value).flat() : [])
+        ...(featuredData.status === 'fulfilled' ? Object.values(featuredData.value).flat() : []),
+        ...(recentlyViewedData.status === 'fulfilled' ? recentlyViewedData.value : []),
+        ...(recentSearchesData.status === 'fulfilled' ? recentSearchesData.value : []),
+        ...(nearbyData.status === 'fulfilled' ? nearbyData.value : [])
       ];
       
       console.log('[DEBUG] Total produits à traiter:', allProducts.length);
@@ -196,44 +281,35 @@ export default function HomeScreen() {
     console.log('[DEBUG] loadImageUrls - Nombre de produits:', products.length);
     
     // Traitement par lots pour améliorer les performances
-    const batchSize = 5;
+    const batchSize = 10; // Augmenter la taille du lot
     for (let i = 0; i < products.length; i += batchSize) {
       const batch = products.slice(i, i + batchSize);
       
       // Traiter le lot en parallèle
       const batchPromises = batch.map(async (product) => {
         try {
-          console.log('[DEBUG] Traitement produit ID:', product.id, 'Titre:', product.title);
-          
           // Vérifier d'abord si l'image est déjà dans le produit
           if (product.images && product.images.length > 0) {
             const imageId = product.images[0].id;
             const imageUrl = ProductService.getImageUrl(imageId);
-            console.log('[DEBUG] Image trouvée dans le produit', product.id, ':', imageUrl);
             return { productId: product.id, imageUrl };
           }
           
           // Si pas d'image dans le produit, essayer de la récupérer depuis l'API
-          console.log('[DEBUG] Aucune image dans le produit, récupération depuis l\'API...');
           try {
             const productImages = await ProductService.getProductImages(product.id);
-            console.log('[DEBUG] Images récupérées depuis l\'API pour produit', product.id, ':', productImages);
             
             if (productImages && productImages.length > 0) {
               const imageId = productImages[0].id;
               const imageUrl = ProductService.getImageUrl(imageId);
-              console.log('[DEBUG] URL générée via API pour produit', product.id, ':', imageUrl);
               return { productId: product.id, imageUrl };
             } else {
-              console.log('[DEBUG] Aucune image trouvée pour le produit', product.id);
               return { productId: product.id, imageUrl: null };
             }
           } catch (apiError) {
-            console.error('[DEBUG] Erreur API pour produit', product.id, ':', apiError);
             return { productId: product.id, imageUrl: null };
           }
         } catch (error) {
-          console.error('[DEBUG] Erreur lors du chargement de l\'image pour le produit', product.id, ':', error);
           return { productId: product.id, imageUrl: null };
         }
       });
@@ -241,15 +317,15 @@ export default function HomeScreen() {
       // Attendre que tous les produits du lot soient traités
       const batchResults = await Promise.all(batchPromises);
       
-      // Ajouter les résultats au dictionnaire
+      // Mettre à jour l'état progressivement pour améliorer l'UX
+      const batchUrls: {[key: number]: string | null} = {};
       batchResults.forEach(({ productId, imageUrl }) => {
-        urls[productId] = imageUrl;
+        batchUrls[productId] = imageUrl;
       });
+      
+      // Mettre à jour l'état pour ce lot
+      setImageUrls(prev => ({ ...prev, ...batchUrls }));
     }
-    
-    // Mettre à jour l'état une seule fois à la fin
-    console.log('[DEBUG] URLs finales:', urls);
-    setImageUrls(prev => ({ ...prev, ...urls }));
   };
 
   const loadFavoriteCounts = async (products: Product[]) => {
@@ -282,6 +358,23 @@ export default function HomeScreen() {
   useEffect(() => {
     loadHomeData();
   }, []);
+
+  // Précharger les images quand les URLs sont disponibles
+  useEffect(() => {
+    const preloadImages = async () => {
+      const urls = Object.values(imageUrls).filter(url => url !== null) as string[];
+      
+      // Précharger les images en arrière-plan
+      urls.forEach(url => {
+        const img = new Image();
+        img.src = url;
+      });
+    };
+
+    if (Object.keys(imageUrls).length > 0) {
+      preloadImages();
+    }
+  }, [imageUrls]);
 
   // Recharger les données quand l'utilisateur revient sur l'écran
   useFocusEffect(
@@ -388,6 +481,14 @@ export default function HomeScreen() {
     });
   };
 
+  const handleCategoryPress = (category: Category) => {
+    // Navigation vers l'écran de recherche avec la catégorie pré-sélectionnée
+    navigation.navigate('SearchResults', { 
+      query: '', 
+      category: category.key 
+    });
+  };
+
   // Mapping catégorie -> icône Ionicons
   const categoryIcons: { [key: string]: string } = {
     immobilier: 'home-outline',
@@ -395,6 +496,27 @@ export default function HomeScreen() {
     services: 'construct-outline',
     mobilier: 'bed-outline',
     electromenager: 'tv-outline',
+  };
+
+  // Fonction pour charger les produits par catégorie
+  const loadProductsByCategory = async (categoryKey: string, limit: number = 5): Promise<Product[]> => {
+    try {
+      const response = await ProductService.getProductsCacheable({ 
+        page: 0, 
+        pageSize: limit * 2 // Charger plus pour avoir assez après filtrage
+      });
+      
+      // Filtrer par catégorie
+      const filteredProducts = (response.content || []).filter(product => 
+        product.category?.categoryKey?.toLowerCase() === categoryKey.toLowerCase() ||
+        product.category?.label?.toLowerCase() === categoryKey.toLowerCase()
+      );
+      
+      return filteredProducts.slice(0, limit);
+    } catch (error) {
+      console.log('Erreur chargement catégorie', categoryKey, ':', error);
+      return [];
+    }
   };
 
   if (loading) {
@@ -435,48 +557,18 @@ export default function HomeScreen() {
 
         {/* Section Catégories */}
         {categories.length > 0 && (
-          <View style={styles.categoriesSection}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Catégories</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('CategoriesGrid')}>
-                <Text style={[styles.viewAllText, { color: colors.primary }]}>Voir tout</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll}>
-              {categories.slice(0, 6).map((category) => (
-                <TouchableOpacity
-                  key={category.id}
-                  style={[styles.categoryCardHorizontal, { backgroundColor: colors.card }]}
-                  onPress={() => navigation.navigate('Category', {
-                    categoryKey: category.key,
-                    categoryLabel: category.label
-                  })}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.categoryIcon, { backgroundColor: colors.background }]}> 
-                    <MaterialCommunityIcons 
-                      name={category.iconName as any || 'tag-outline'} 
-                      size={28} 
-                      color={colors.primary} 
-                    />
-                  </View>
-                  <Text 
-                    style={[styles.categoryLabel, { color: colors.text, maxWidth: 80 }]} 
-                    numberOfLines={1} 
-                    ellipsizeMode="tail"
-                  >
-                    {category.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
+          <CategoryGrid
+            categories={categories}
+            onCategoryPress={handleCategoryPress}
+            onViewAllPress={() => navigation.navigate('CategoriesGrid')}
+            maxItems={8}
+          />
         )}
 
         {/* Coups de cœur */}
         {isAuthenticated && !isGuest && favorites.length > 0 && (
-          <HorizontalProductList
-            title="Vos coups de cœur"
+          <SpecialProductList
+            type="favorites"
             products={favorites}
             onProductPress={handleProductPress}
             onFavoritePress={handleFavoritePress}
@@ -484,62 +576,89 @@ export default function HomeScreen() {
             imageUrls={imageUrls}
             favoriteCounts={favoriteCounts}
             isFavorite={isFavorite}
-            icon="heart"
+            maxItems={5}
           />
         )}
 
         {/* Dernières recherches */}
         {recentSearches.length > 0 && (
-          <HorizontalProductList
-            title="D'après vos dernières recherches"
+          <SpecialProductList
+            type="recommended"
             products={recentSearches}
             onProductPress={handleProductPress}
             onFavoritePress={handleFavoritePress}
+            onViewAllPress={() => navigation.navigate('SearchResults', { 
+              query: 'recommandés', 
+              category: undefined
+            })}
             imageUrls={imageUrls}
             favoriteCounts={favoriteCounts}
             isFavorite={isFavorite}
-            icon="search"
+            maxItems={5}
           />
         )}
 
         {/* Récemment vus */}
         {recentlyViewed.length > 0 && (
-          <HorizontalProductList
-            title="Récemment vus"
+          <SpecialProductList
+            type="recent"
             products={recentlyViewed}
             onProductPress={handleProductPress}
             onFavoritePress={handleFavoritePress}
+            onViewAllPress={() => navigation.navigate('SearchResults', { 
+              query: 'récemment vus', 
+              category: undefined
+            })}
             imageUrls={imageUrls}
             favoriteCounts={favoriteCounts}
             isFavorite={isFavorite}
-            icon="time"
+            maxItems={5}
           />
         )}
 
         {/* Annonces récentes */}
         {recentProducts.length > 0 && (
-          <HorizontalProductList
-            title="Annonces récentes"
+          <SpecialProductList
+            type="trending"
             products={getFilteredProducts(recentProducts, selectedFilter)}
             onProductPress={handleProductPress}
             onFavoritePress={handleFavoritePress}
-            onViewAllPress={handleViewAllRecent}
+            onViewAllPress={() => navigation.navigate('SearchResults', { 
+              query: 'annonces récentes', 
+              category: undefined
+            })}
             imageUrls={imageUrls}
             favoriteCounts={favoriteCounts}
             isFavorite={isFavorite}
-            icon="trending-up"
+            maxItems={5}
           />
         )}
-        
 
+        {/* Produits locaux */}
+        {nearbyProducts.length > 0 && (
+          <SpecialProductList
+            type="nearby"
+            products={nearbyProducts}
+            onProductPress={handleProductPress}
+            onFavoritePress={handleFavoritePress}
+            onViewAllPress={() => navigation.navigate('SearchResults', { 
+              query: 'produits locaux', 
+              category: undefined
+            })}
+            imageUrls={imageUrls}
+            favoriteCounts={favoriteCounts}
+            isFavorite={isFavorite}
+            maxItems={5}
+          />
+        )}
 
         {/* Catégories mises en avant */}
         {Object.entries(featuredCategories).map(([category, products]) => {
           if (products.length > 0) {
             return (
-              <HorizontalProductList
+              <CategoryProductList
                 key={category}
-                title={category.charAt(0).toUpperCase() + category.slice(1)}
+                category={category}
                 products={getFilteredProducts(products, selectedFilter)}
                 onProductPress={handleProductPress}
                 onFavoritePress={handleFavoritePress}
@@ -547,8 +666,7 @@ export default function HomeScreen() {
                 imageUrls={imageUrls}
                 favoriteCounts={favoriteCounts}
                 isFavorite={isFavorite}
-                icon={categoryIcons[category] || 'grid'}
-                category={category}
+                maxItems={5}
               />
             );
           }

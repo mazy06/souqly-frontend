@@ -25,9 +25,31 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ProductDetailRouteProp = RouteProp<{ ProductDetail: { productId: string } }, 'ProductDetail'>;
 
+// Types pour la navigation
+type RootStackParamList = {
+  AuthLanding: undefined;
+  Payment: {
+    productId: string;
+    productPrice: number;
+    productTitle: string;
+    productImage?: string;
+  };
+  Messages: {
+    screen: string;
+    params: {
+      conversationId: string;
+      name: string;
+      avatarUrl?: string;
+      productId: number;
+    };
+  };
+  ProfileDetail: { userId: string };
+  ProductImages: { images: string[] };
+};
+
 export default function ProductDetailScreen() {
   const route = useRoute<ProductDetailRouteProp>();
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const { isAuthenticated, isGuest, user } = useAuth();
   const productId = route.params?.productId;
   const [product, setProduct] = useState<Product | null>(null);

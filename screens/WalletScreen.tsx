@@ -8,13 +8,15 @@ import ApiService from '../services/ApiService';
 import { useAuth } from '../contexts/AuthContext';
 import WalletService, { WalletOperation } from '../services/WalletService';
 import { formatAmount } from '../utils/formatters';
+import { ProfileStackParamList } from '../types/navigation';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 type OperationType = 'all' | 'earnings' | 'expenses' | 'transfers';
 
 // Utiliser l'interface WalletOperation du service
 
 export default function WalletScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<StackNavigationProp<ProfileStackParamList>>();
   const { colors } = useTheme();
   const { user } = useAuth();
   
@@ -192,7 +194,10 @@ export default function WalletScreen() {
               </Text>
             </View>
           </View>
-          <TouchableOpacity style={[styles.transferButton, { backgroundColor: colors.primary }]}>
+          <TouchableOpacity 
+            style={[styles.transferButton, { backgroundColor: colors.primary }]}
+            onPress={() => navigation.navigate('TransferSelection')}
+          >
             <Text style={styles.transferButtonText}>Transférer</Text>
           </TouchableOpacity>
         </View>

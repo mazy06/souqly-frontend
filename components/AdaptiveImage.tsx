@@ -12,13 +12,14 @@ const AdaptiveImage: React.FC<AdaptiveImageProps> = ({
   style, 
   alt = "Image", 
   onError, 
+  onLoadEnd,
   retryCount = 0,
   ...props 
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [retryAttempts, setRetryAttempts] = useState(0);
-  const maxRetries = 2;
+  const maxRetries = 1; // Réduire le nombre de retry
 
   const handleLoadStart = () => {
     setIsLoading(true);
@@ -27,6 +28,7 @@ const AdaptiveImage: React.FC<AdaptiveImageProps> = ({
 
   const handleLoadEnd = () => {
     setIsLoading(false);
+    if (onLoadEnd) onLoadEnd();
   };
 
   const handleError = (error: any) => {
@@ -40,7 +42,7 @@ const AdaptiveImage: React.FC<AdaptiveImageProps> = ({
         setRetryAttempts(prev => prev + 1);
         setHasError(false);
         setIsLoading(true);
-      }, 1000 * (retryAttempts + 1)); // Délai progressif
+      }, 500); // Délai plus court
     } else if (onError) {
       onError(error);
     }

@@ -1,4 +1,6 @@
 import ApiService from './ApiService';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
 
 export interface Notification {
   id: string;
@@ -53,6 +55,81 @@ const MOCK_NOTIFICATIONS: Notification[] = [
 
 class NotificationService {
   private baseUrl = '/notifications';
+
+  // Configuration des notifications push
+  async registerForPushNotificationsAsync(): Promise<string | undefined> {
+    let token;
+
+    if (Device.isDevice) {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      
+      if (finalStatus !== 'granted') {
+        console.log('Permissions de notifications non accordées');
+        return;
+      }
+      
+      token = (await Notifications.getExpoPushTokenAsync()).data;
+    } else {
+      console.log('Notifications push non disponibles sur l\'émulateur');
+    }
+
+    return token;
+  }
+
+  // Vérifier si les notifications sont activées
+  async areNotificationsEnabled(): Promise<boolean> {
+    const { status } = await Notifications.getPermissionsAsync();
+    return status === 'granted';
+  }
+
+  // Demander les permissions
+  async requestPermissions(): Promise<boolean> {
+    const { status } = await Notifications.requestPermissionsAsync();
+    return status === 'granted';
+  }
+
+  // Envoyer une notification immédiate
+  async notifyNoPhotosInAd(productTitle: string): Promise<void> {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'Ajoutez des photos à votre annonce',
+        body: `Votre annonce "${productTitle}" a été publiée sans photos. Ajoutez des photos pour augmenter vos chances de vente !`,
+        data: { productTitle },
+      },
+      trigger: null, // Notification immédiate
+    });
+  }
+
+  // Programmer un rappel pour ajouter des photos
+  async schedulePhotoReminder(productTitle: string, minutes: number): Promise<void> {
+    setTimeout(async () => {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Rappel : Photos de votre annonce',
+          body: `N'oubliez pas d'ajouter des photos à votre annonce "${productTitle}" pour attirer plus d'acheteurs !`,
+          data: { productTitle },
+        },
+        trigger: null,
+      });
+    }, minutes * 60 * 1000);
+  }
+
+  // Envoyer une notification de test
+  async sendTestNotification(): Promise<void> {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'Test de notification',
+        body: 'Ceci est une notification de test pour vérifier que tout fonctionne correctement.',
+      },
+      trigger: null,
+    });
+  }
 
   // Récupérer toutes les notifications de l'utilisateur
   async getNotifications(): Promise<Notification[]> {

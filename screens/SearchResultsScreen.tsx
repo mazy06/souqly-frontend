@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { useFavorites } from '../hooks/useFavorites';
 import ProductService, { Product } from '../services/ProductService';
 import ProductCard from '../components/ProductCard';
-import SearchHeader from '../components/SearchHeader';
+import SearchBar from '../components/SearchBar';
+import FilterChips from '../components/FilterChips';
 
 interface SearchResultsRouteParams {
   query: string;
@@ -24,8 +26,10 @@ export default function SearchResultsScreen() {
   const { colors } = useTheme();
   const { isFavorite, toggleFavorite } = useFavorites();
   
-  const { query, category } = route.params as SearchResultsRouteParams;
+  const { query: initialQuery, category } = route.params as SearchResultsRouteParams;
   
+  const [searchQuery, setSearchQuery] = useState(initialQuery || '');
+  const [selectedFilter, setSelectedFilter] = useState('all');
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -42,12 +46,43 @@ export default function SearchResultsScreen() {
       setError(null);
 
       const filters: any = {
-        search: query,
+        search: searchQuery,
         page: 0,
         pageSize: 20,
-        sortBy: 'createdAt',
-        sortOrder: 'desc'
       };
+      
+      // Appliquer le filtre sélectionné
+      switch (selectedFilter) {
+        case 'recent':
+          filters.sortBy = 'createdAt';
+          filters.sortOrder = 'desc';
+          break;
+        case 'popular':
+          filters.sortBy = 'favoriteCount';
+          filters.sortOrder = 'desc';
+          break;
+        case 'nearby':
+          // Filtrer les produits avec localisation
+          break;
+        case 'new':
+          // Produits créés dans les 7 derniers jours
+          const oneWeekAgo = new Date();
+          oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+          // TODO: Ajouter filtre de date côté backend
+          break;
+        case 'promo':
+          // TODO: Filtrer les produits en promotion
+          break;
+        case 'verified':
+          // TODO: Filtrer les produits de vendeurs vérifiés
+          break;
+        case 'urgent':
+          // TODO: Filtrer les produits urgents
+          break;
+        default:
+          filters.sortBy = 'createdAt';
+          filters.sortOrder = 'desc';
+      }
       
       // Ajouter le filtre de catégorie si fourni
       if (category) {
@@ -56,7 +91,7 @@ export default function SearchResultsScreen() {
           filters.categoryId = category;
         } else {
           // Sinon, c'est un filtre textuel, l'ajouter à la recherche
-          filters.search = query ? `${query} ${category}` : category;
+          filters.search = searchQuery ? `${searchQuery} ${category}` : category;
         }
       }
       
@@ -87,10 +122,18 @@ export default function SearchResultsScreen() {
 
   useEffect(() => {
     loadSearchResults();
-  }, [query]);
+  }, [searchQuery, selectedFilter]);
 
   const onRefresh = () => {
     loadSearchResults(true);
+  };
+
+  const handleSearchSubmit = () => {
+    loadSearchResults();
+  };
+
+  const handleFilterSelect = (filter: string) => {
+    setSelectedFilter(filter);
   };
 
   const handleProductPress = (productId: number) => {
@@ -125,7 +168,7 @@ export default function SearchResultsScreen() {
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
       <Text style={[styles.emptyText, { color: colors.text }]}>
-        Aucun résultat trouvé pour "{query}"
+        Aucun résultat trouvé pour "{searchQuery}"
       </Text>
       <Text style={[styles.emptySubtext, { color: colors.tabIconDefault }]}>
         Essayez avec d'autres mots-clés
@@ -136,7 +179,26 @@ export default function SearchResultsScreen() {
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <SearchHeader title={category ? `${category} - ${query || 'Tous les produits'}` : `Résultats pour "${query}"`} />
+        <View style={[styles.header, { backgroundColor: colors.background }]}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>
+            Résultats pour "{searchQuery}"
+          </Text>
+        </View>
+        <View style={[styles.searchContainer, { backgroundColor: colors.background }]}>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onSubmit={handleSearchSubmit}
+            placeholder="Rechercher..."
+          />
+          <FilterChips
+            selected={selectedFilter}
+            onSelect={handleFilterSelect}
+          />
+        </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[styles.loadingText, { color: colors.text }]}>
@@ -149,7 +211,26 @@ export default function SearchResultsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <SearchHeader title={`Résultats pour "${query}"`} />
+      <View style={[styles.header, { backgroundColor: colors.background }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          Résultats pour "{searchQuery}"
+        </Text>
+      </View>
+      <View style={[styles.searchContainer, { backgroundColor: colors.background }]}>
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          onSubmit={handleSearchSubmit}
+          placeholder="Rechercher..."
+        />
+        <FilterChips
+          selected={selectedFilter}
+          onSelect={handleFilterSelect}
+        />
+      </View>
       <FlatList
         data={products}
         renderItem={renderProduct}
@@ -170,6 +251,28 @@ export default function SearchResultsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  backButton: {
+    marginRight: 12,
+    padding: 4,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    flex: 1,
+  },
+  searchContainer: {
+    paddingTop: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
   },
   scrollContent: {
     paddingHorizontal: 16,

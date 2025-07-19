@@ -15,23 +15,11 @@ import Colors from '../constants/Colors';
 import { useColorScheme } from 'react-native';
 import TransactionsScreen from '../screens/TransactionsScreen';
 import OrdersScreen from '../screens/OrdersScreen';
-
-export type ProfileStackParamList = {
-  ProfileMain: undefined;
-  AdminCategories: undefined;
-  MyProducts: undefined;
-  MyProductDetail: { productId: string };
-  EditProduct: { productId: string };
-  Wallet: undefined;
-  EditProfile: undefined;
-  MyAnnouncements: undefined;
-  Transactions: undefined;
-  Orders: undefined;
-  EmailSettings: undefined;
-  PaymentMethods: undefined;
-  NotificationSettings: undefined;
-  BulkDiscount: undefined;
-};
+import TransferSelectionScreen from '../screens/TransferSelectionScreen';
+import TransferAmountScreen from '../screens/TransferAmountScreen';
+import TransferConfirmationScreen from '../screens/TransferConfirmationScreen';
+import TransferSuccessScreen from '../screens/TransferSuccessScreen';
+import { ProfileStackParamList } from '../types/navigation';
 
 const Stack = createStackNavigator();
 
@@ -61,6 +49,10 @@ export default function ProfileStack() {
       <Stack.Screen name="PaymentMethods" component={PaymentMethodsScreen} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
       <Stack.Screen name="BulkDiscount" component={BulkDiscountScreen} />
+      <Stack.Screen name="TransferSelection" component={TransferSelectionScreen} />
+      <Stack.Screen name="TransferAmount" component={TransferAmountScreen} />
+      <Stack.Screen name="TransferConfirmation" component={TransferConfirmationScreen} />
+      <Stack.Screen name="TransferSuccess" component={TransferSuccessScreen} />
     </Stack.Navigator>
   );
 } 

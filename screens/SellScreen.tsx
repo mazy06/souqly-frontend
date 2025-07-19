@@ -20,7 +20,7 @@ import ProductImagePicker from '../components/ProductImagePicker';
 import CategoryPicker from '../components/CategoryPicker';
 import SimplePicker from '../components/SimplePicker';
 import ProductService from '../services/ProductService';
-import NotificationService from '../services/NotificationService';
+import KafkaNotificationService from '../services/KafkaNotificationService';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { getImageUrl, getUploadUrl } from '../constants/Config';
@@ -306,19 +306,17 @@ export default function SellScreen() {
         setCategoriesLoading(false);
       }
       
-      // Initialiser les notifications
+      // Initialiser Kafka et les notifications
       try {
-        await NotificationService.registerForPushNotificationsAsync();
+        // Initialiser la connexion Kafka
+        await KafkaNotificationService.initializeKafkaConnection();
         
-        // Configurer la gestion des notifications reçues
-        const subscription = Notifications.addNotificationReceivedListener(notification => {
-          console.log('Notification reçue:', notification);
-          // Ici vous pouvez ajouter une logique pour traiter les notifications
-          // Par exemple, afficher un toast ou naviguer vers une page spécifique
-        });
+        // Configurer les notifications push
+        await KafkaNotificationService.registerForPushNotificationsAsync();
         
-        // Cleanup de l'écouteur
-        return () => subscription?.remove();
+        // Configurer les listeners de notifications
+        KafkaNotificationService.setupNotificationListener();
+        
       } catch (error) {
         console.log('Erreur lors de l\'initialisation des notifications:', error);
       }
@@ -482,16 +480,16 @@ export default function SellScreen() {
       if (formData.imageIds.length === 0) {
         try {
           // Demander les permissions si nécessaire
-          const hasPermissions = await NotificationService.areNotificationsEnabled();
+          const hasPermissions = await KafkaNotificationService.areNotificationsEnabled();
           if (!hasPermissions) {
-            await NotificationService.requestPermissions();
+            await KafkaNotificationService.requestPermissions();
           }
           
           // Envoyer la notification immédiate
-          await NotificationService.notifyNoPhotosInAd(formData.title);
+          await KafkaNotificationService.notifyNoPhotosInAd(formData.title);
           
           // Programmer un rappel pour plus tard (30 minutes)
-          await NotificationService.schedulePhotoReminder(formData.title, 30);
+          await KafkaNotificationService.schedulePhotoReminder(formData.title, 30);
           
         } catch (error) {
           console.log('Erreur lors de l\'envoi de la notification:', error);
@@ -1759,7 +1757,7 @@ export default function SellScreen() {
           style={[styles.testButton, { backgroundColor: colors.primary }]}
           onPress={async () => {
             try {
-              await NotificationService.sendTestNotification();
+              await KafkaNotificationService.sendTestNotification();
               Alert.alert('Test', 'Notification de test envoyée !');
             } catch (error) {
               Alert.alert('Erreur', 'Erreur lors de l\'envoi de la notification de test');

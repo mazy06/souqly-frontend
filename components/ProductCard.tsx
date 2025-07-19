@@ -20,8 +20,9 @@ type Props = {
   status?: string;
 };
 
-// Cache local pour les images déjà chargées
+// Cache global pour les images déjà chargées
 const imageCache = new Map<string, string | null>();
+const loadingCache = new Set<string>();
 
 export default function ProductCard({ 
   title, 
@@ -40,14 +41,13 @@ export default function ProductCard({
 }: Props) {
   const { colors } = useTheme();
   const [currentImage, setCurrentImage] = useState<string | null>(image);
-  
-  // Debug log
-  // console.log('[DEBUG] ProductCard - Titre:', title, 'Likes:', likes, 'Image:', image);
+  const [isImageLoading, setIsImageLoading] = useState(false);
 
   // Mettre à jour l'image quand elle change
   useEffect(() => {
     if (image !== currentImage) {
       setCurrentImage(image);
+      setIsImageLoading(false);
     }
   }, [image]);
 
@@ -55,9 +55,21 @@ export default function ProductCard({
   const cachedImage = useMemo(() => {
     if (!image) return null;
     
-    if (imageCache.has(image)) {
-      return imageCache.get(image);
+    // Vérifier si l'image est en cours de chargement
+    if (loadingCache.has(image)) {
+      setIsImageLoading(true);
+      return null;
     }
+    
+    if (imageCache.has(image)) {
+      const cached = imageCache.get(image);
+      setIsImageLoading(false);
+      return cached;
+    }
+    
+    // Marquer comme en cours de chargement
+    loadingCache.add(image);
+    setIsImageLoading(true);
     
     // Ajouter au cache
     imageCache.set(image, image);
@@ -72,12 +84,22 @@ export default function ProductCard({
             source={{ uri: cachedImage }} 
             style={styles.image} 
             alt={title}
+            onLoadEnd={() => {
+              setIsImageLoading(false);
+              loadingCache.delete(cachedImage);
+            }}
             onError={(error) => {
               console.log('[DEBUG] Erreur chargement image:', cachedImage, error);
               // Marquer comme échoué dans le cache
               imageCache.set(cachedImage, null);
+              loadingCache.delete(cachedImage);
+              setIsImageLoading(false);
             }}
           />
+        ) : isImageLoading ? (
+          <View style={[styles.image, { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' }]}>
+            <Text style={{ color: '#999', fontSize: 12 }}>Chargement...</Text>
+          </View>
         ) : (
           <View style={[styles.image, { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' }]}>
             <Text style={{ color: '#999', fontSize: 12 }}>Pas d'image</Text>
