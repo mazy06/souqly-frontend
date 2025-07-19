@@ -8,6 +8,8 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useFavorites } from '../hooks/useFavorites';
 import ProductService, { Product } from '../services/ProductService';
 import CategoryService, { Category } from '../services/CategoryService';
+import InteractionTrackingService from '../services/InteractionTrackingService';
+import RecommendationService from '../services/RecommendationService';
 import HomeHeader from '../components/HomeHeader';
 import HorizontalProductList from '../components/HorizontalProductList';
 import CategoryProductList from '../components/CategoryProductList';
@@ -15,6 +17,7 @@ import SpecialProductList from '../components/SpecialProductList';
 import CategoryGrid from '../components/CategoryGrid';
 import PromotionalBanner from '../components/PromotionalBanner';
 import VisitorBadge from '../components/VisitorBadge';
+import RecommendationSection from '../components/RecommendationSection';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -32,10 +35,13 @@ export type HomeStackParamList = {
 export default function HomeScreen() {
   console.log('🏠 [HomeScreen] Nouvelle page d\'accueil chargée');
   const navigation = useNavigation<StackNavigationProp<HomeStackParamList>>();
-  const { logout, isGuest, isAuthenticated } = useAuth();
+  const { logout, isGuest, isAuthenticated, user } = useAuth();
   const { colors } = useTheme();
   const { isFavorite, toggleFavorite, refreshFavorites } = useFavorites();
   
+  const trackingService = InteractionTrackingService.getInstance();
+  const recommendationService = RecommendationService.getInstance();
+
   // États pour la recherche et filtres
   const [search, setSearch] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
@@ -209,21 +215,21 @@ export default function HomeScreen() {
         })(),
         
         // Charger les catégories
-        CategoryService.getCategoryTree(),
+        CategoryService.getAllCategories(),
         
         // Charger les produits récemment vus
         loadRecentlyViewed(),
         
         // Charger les produits basés sur les recherches récentes
         loadRecentSearches(),
-
+        
         // Charger les produits locaux
-        loadNearbyProducts()
+        loadNearbyProducts(),
       ]);
       
       // Traiter les résultats
       if (favoritesList.status === 'fulfilled') {
-        setFavorites(favoritesList.value.slice(0, 10));
+        setFavorites(favoritesList.value);
       }
       
       if (recentResponse.status === 'fulfilled') {
@@ -233,46 +239,47 @@ export default function HomeScreen() {
       if (featuredData.status === 'fulfilled') {
         setFeaturedCategories(featuredData.value);
       }
-
+      
       if (categoriesData.status === 'fulfilled') {
         setCategories(categoriesData.value);
+        setCategoriesLoading(false);
       }
-
+      
       if (recentlyViewedData.status === 'fulfilled') {
         setRecentlyViewed(recentlyViewedData.value);
       }
-
+      
       if (recentSearchesData.status === 'fulfilled') {
         setRecentSearches(recentSearchesData.value);
       }
-
+      
       if (nearbyData.status === 'fulfilled') {
         setNearbyProducts(nearbyData.value);
       }
-
-      // Charger les URLs des images et les compteurs de favoris en parallèle
+      
+      // Charger les URLs d'images et compteurs de favoris
       const allProducts = [
-        ...(favoritesList.status === 'fulfilled' ? favoritesList.value : []),
         ...(recentResponse.status === 'fulfilled' ? recentResponse.value.content || [] : []),
-        ...(featuredData.status === 'fulfilled' ? Object.values(featuredData.value).flat() : []),
+        ...(favoritesList.status === 'fulfilled' ? favoritesList.value : []),
         ...(recentlyViewedData.status === 'fulfilled' ? recentlyViewedData.value : []),
         ...(recentSearchesData.status === 'fulfilled' ? recentSearchesData.value : []),
-        ...(nearbyData.status === 'fulfilled' ? nearbyData.value : [])
+        ...(nearbyData.status === 'fulfilled' ? nearbyData.value : []),
       ];
       
-      console.log('[DEBUG] Total produits à traiter:', allProducts.length);
-      
-      // Charger les images et compteurs en parallèle
       await Promise.all([
         loadImageUrls(allProducts),
         loadFavoriteCounts(allProducts)
       ]);
-
+      
+      // Mettre à jour les données de recommandation en arrière-plan
+      if (user?.id) {
+        recommendationService.updateRecommendationData(parseInt(user.id));
+      }
+      
     } catch (error) {
-      console.error('Erreur chargement données accueil:', error);
+      console.error('Erreur lors du chargement des données:', error);
     } finally {
       setLoading(false);
-      setCategoriesLoading(false);
     }
   };
 
@@ -388,12 +395,26 @@ export default function HomeScreen() {
   );
 
   const handleProductPress = (productId: number) => {
+    // Tracker le clic sur le produit
+    if (user?.id) {
+      trackingService.trackInteraction('CLICK', productId, parseInt(user.id));
+    }
+    
     navigation.navigate('ProductDetail', { productId: productId.toString() });
   };
 
   const handleFavoritePress = async (productId: number) => {
     try {
       const result = await toggleFavorite(productId);
+      
+      // Tracker l'action de favori
+      if (user?.id) {
+        if (result.isFavorite) {
+          trackingService.trackInteraction('FAVORITE', productId, parseInt(user.id));
+        } else {
+          trackingService.trackInteraction('UNFAVORITE', productId, parseInt(user.id));
+        }
+      }
       
       // Mise à jour optimiste du compteur
       setFavoriteCounts(prev => {
@@ -412,6 +433,11 @@ export default function HomeScreen() {
   const handleSearchSubmit = async () => {
     if (search.trim()) {
       try {
+        // Tracker la recherche
+        if (user?.id) {
+          trackingService.trackSearch(search.trim(), parseInt(user.id));
+        }
+        
         // Navigation vers l'écran de recherche avec le terme
         navigation.navigate('SearchResults', { query: search.trim() });
       } catch (error) {
@@ -565,6 +591,22 @@ export default function HomeScreen() {
           />
         )}
 
+        {/* Section Recommandations (pour utilisateurs connectés) */}
+        {isAuthenticated && !isGuest && user?.id && (
+          <RecommendationSection
+            title="Recommandés pour vous"
+            subtitle="Basé sur vos préférences"
+            limit={5}
+            showBoostedBadge={true}
+            onProductPress={handleProductPress}
+            onFavoritePress={handleFavoritePress}
+            onViewAllPress={() => navigation.navigate('SearchResults', { 
+              query: 'recommandés', 
+              category: undefined
+            })}
+          />
+        )}
+
         {/* Coups de cœur */}
         {isAuthenticated && !isGuest && favorites.length > 0 && (
           <SpecialProductList
@@ -616,17 +658,14 @@ export default function HomeScreen() {
           />
         )}
 
-        {/* Annonces récentes */}
+        {/* Produits récents */}
         {recentProducts.length > 0 && (
           <SpecialProductList
-            type="trending"
-            products={getFilteredProducts(recentProducts, selectedFilter)}
+            type="recent"
+            products={recentProducts}
             onProductPress={handleProductPress}
             onFavoritePress={handleFavoritePress}
-            onViewAllPress={() => navigation.navigate('SearchResults', { 
-              query: 'annonces récentes', 
-              category: undefined
-            })}
+            onViewAllPress={handleViewAllRecent}
             imageUrls={imageUrls}
             favoriteCounts={favoriteCounts}
             isFavorite={isFavorite}
@@ -642,7 +681,7 @@ export default function HomeScreen() {
             onProductPress={handleProductPress}
             onFavoritePress={handleFavoritePress}
             onViewAllPress={() => navigation.navigate('SearchResults', { 
-              query: 'produits locaux', 
+              query: 'près de chez vous', 
               category: undefined
             })}
             imageUrls={imageUrls}
@@ -653,25 +692,22 @@ export default function HomeScreen() {
         )}
 
         {/* Catégories mises en avant */}
-        {Object.entries(featuredCategories).map(([category, products]) => {
-          if (products.length > 0) {
-            return (
-              <CategoryProductList
-                key={category}
-                category={category}
-                products={getFilteredProducts(products, selectedFilter)}
-                onProductPress={handleProductPress}
-                onFavoritePress={handleFavoritePress}
-                onViewAllPress={() => handleViewAllCategory(category)}
-                imageUrls={imageUrls}
-                favoriteCounts={favoriteCounts}
-                isFavorite={isFavorite}
-                maxItems={5}
-              />
-            );
-          }
-          return null;
-        })}
+        {Object.entries(featuredCategories).map(([categoryKey, products]) => (
+          products.length > 0 && (
+            <CategoryProductList
+              key={categoryKey}
+              category={categoryKey}
+              products={products}
+              onProductPress={handleProductPress}
+              onFavoritePress={handleFavoritePress}
+              onViewAllPress={() => handleViewAllCategory(categoryKey)}
+              imageUrls={imageUrls}
+              favoriteCounts={favoriteCounts}
+              isFavorite={isFavorite}
+              maxItems={5}
+            />
+          )
+        ))}
       </ScrollView>
     </SafeAreaView>
   );

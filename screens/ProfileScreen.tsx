@@ -18,6 +18,25 @@ import WalletService from '../services/WalletService';
 export type ProfileStackParamList = {
   ProfileMain: undefined;
   AdminCategories: undefined;
+  AdminAnalytics: undefined;
+  BoostManagement: undefined;
+  RealTimeMonitoring: undefined;
+  UserManagement: undefined;
+  ProductModeration: undefined;
+  AdvancedAnalytics: undefined;
+  FinancialReports: undefined;
+  PlatformSettings: undefined;
+  RoleManagement: undefined;
+  SecurityAudit: undefined;
+  GDPRCompliance: undefined;
+  NotificationsManagement: undefined;
+  SupportTickets: undefined;
+  SystemMaintenance: undefined;
+  APIManagement: undefined;
+  PaymentManagement: undefined;
+  SubscriptionManagement: undefined;
+  MarketingPromotions: undefined;
+  SEOOptimization: undefined;
   MyProducts: undefined;
   MyProductDetail: { productId: string };
   EditProduct: { productId: string };
@@ -40,6 +59,7 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [userProducts, setUserProducts] = useState<any[]>([]);
   const [walletBalance, setWalletBalance] = useState(0);
+  const [activeTab, setActiveTab] = useState<'user' | 'admin'>('user');
 
   useEffect(() => {
     if (user && !isGuest) {
@@ -191,8 +211,6 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-
       {/* Profile Info */}
       <View style={styles.profileSection}>
         <TouchableOpacity 
@@ -233,327 +251,644 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
 
-        {/* Stats */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statItem}>
-            <Text style={[styles.statNumber, { color: colors.primary }]}>
-              {userStats?.followersCount || 0}
-            </Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-              Abonnés
-            </Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text style={[styles.statNumber, { color: colors.primary }]}>
-              {userStats?.followingCount || 0}
-            </Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-              Abonnements
-            </Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text style={[styles.statNumber, { color: colors.primary }]}>
-              {userStats?.productsCount || 0}
-            </Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-              Articles
-            </Text>
-          </View>
+      {/* Stats */}
+      <View style={styles.statsContainer}>
+        <View style={styles.statItem}>
+          <Text style={[styles.statNumber, { color: colors.primary }]}>
+            {userStats?.followersCount || 0}
+          </Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+            Abonnés
+          </Text>
         </View>
-
-
-
-      {/* Wallet Card */}
-      <WalletCard
-        balance={walletBalance}
-        onPress={() => navigation.navigate('Wallet')}
-      />
-
-      {/* Mes annonces - Design ultra simple */}
-      <View style={styles.announcementsSection}>
-        <TouchableOpacity
-          style={styles.announcementsCard}
-          onPress={() => navigation.navigate('MyAnnouncements')}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="list-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
-          <Text style={[styles.announcementsTitle, { color: colors.text }]}>
-            Mes annonces ({userProducts.length})
+        <View style={styles.statItem}>
+          <Text style={[styles.statNumber, { color: colors.primary }]}>
+            {userStats?.followingCount || 0}
           </Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+            Abonnements
+          </Text>
+        </View>
+        <View style={styles.statItem}>
+          <Text style={[styles.statNumber, { color: colors.primary }]}>
+            {userStats?.productsCount || 0}
+          </Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+            Articles
+          </Text>
+        </View>
       </View>
 
-      {/* Transactions - Design ultra simple */}
-      <View style={styles.announcementsSection}>
-        <TouchableOpacity
-          style={styles.announcementsCard}
-          onPress={() => navigation.navigate('Transactions')}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="swap-horizontal-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
-          <Text style={[styles.announcementsTitle, { color: colors.text }]}>
-            Transactions
-          </Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
-      </View>
+      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+        {/* Wallet Card */}
+        <WalletCard
+          balance={walletBalance}
+          onPress={() => navigation.navigate('Wallet')}
+        />
 
-      {/* Commandes - Design ultra simple */}
-      <View style={styles.announcementsSection}>
-        <TouchableOpacity
-          style={styles.announcementsCard}
-          onPress={() => navigation.navigate('Orders')}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="bag-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
-          <Text style={[styles.announcementsTitle, { color: colors.text }]}>
-            Commandes
-          </Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Paramètres - Design ultra simple avec accordéon */}
-      <View style={styles.announcementsSection}>
-        <TouchableOpacity
-          style={styles.announcementsCard}
-          onPress={() => setSettingsExpanded(!settingsExpanded)}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="settings-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
-          <Text style={[styles.announcementsTitle, { color: colors.text }]}>
-            Paramètres
-          </Text>
-                      <Ionicons 
-              name={settingsExpanded ? "chevron-down" : "chevron-forward"} 
-              size={20} 
-              color={colors.textSecondary} 
-            />
-        </TouchableOpacity>
-        
-        {/* Sous-éléments déroulés */}
-        {settingsExpanded && (
-          <View style={styles.expandedContent}>
-            <TouchableOpacity 
-              style={styles.subMenuItem} 
-              activeOpacity={0.7}
-              onPress={() => navigation.navigate('EditProfile')}
-            >
-              <Ionicons name="person-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
-              <Text style={[styles.subMenuText, { color: colors.text }]}>
-                Profil
-              </Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.subMenuItem} 
-              activeOpacity={0.7}
-              onPress={() => navigation.navigate('EmailSettings')}
-            >
-              <Ionicons name="mail-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
-              <Text style={[styles.subMenuText, { color: colors.text }]}>
-                Email
-              </Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.subMenuItem} 
-              activeOpacity={0.7}
-              onPress={() => navigation.navigate('PaymentMethods')}
-            >
-              <Ionicons name="card-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
-              <Text style={[styles.subMenuText, { color: colors.text }]}>
-                Moyens de paiement
-              </Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.subMenuItem} 
-              activeOpacity={0.7}
-              onPress={() => navigation.navigate('NotificationSettings')}
-            >
-              <Ionicons name="notifications-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
-              <Text style={[styles.subMenuText, { color: colors.text }]}>
-                Notifications
-              </Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.subMenuItem} 
-              activeOpacity={0.7}
-              onPress={() => navigation.navigate('BulkDiscount')}
-            >
-              <Ionicons name="pricetag-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
-              <Text style={[styles.subMenuText, { color: colors.text }]}>
-                Réductions sur les lots
-              </Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.subMenuItem} activeOpacity={0.7}>
-              <Ionicons name="shield-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
-              <Text style={[styles.subMenuText, { color: colors.text }]}>
-                Confidentialité
-              </Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.subMenuItem} activeOpacity={0.7}>
-              <Ionicons name="help-circle-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
-              <Text style={[styles.subMenuText, { color: colors.text }]}>
-                Aide
-              </Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-
-              {/* Connexion et Sécurité - Menu déroulant */}
-        <View style={styles.announcementsSection}>
+        {/* Tabs - Nouveau design */}
+        <View style={styles.tabsContainer}>
           <TouchableOpacity
-            style={styles.announcementsCard}
-            onPress={() => setSecurityExpanded(!securityExpanded)}
-            activeOpacity={0.7}
+            style={[
+              styles.tabButton,
+              activeTab === 'user' && styles.activeTabButton,
+              { borderColor: colors.border }
+            ]}
+            onPress={() => setActiveTab('user')}
           >
-            <Ionicons name="shield-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
-            <Text style={[styles.announcementsTitle, { color: colors.text }]}>
-              Connexion et Sécurité
-            </Text>
             <Ionicons 
-              name={securityExpanded ? "chevron-down" : "chevron-forward"} 
+              name="person-outline" 
               size={20} 
-              color={colors.textSecondary} 
+              color={activeTab === 'user' ? colors.primary : colors.textSecondary} 
             />
+            <Text style={[
+              styles.tabText,
+              { color: activeTab === 'user' ? colors.primary : colors.textSecondary }
+            ]}>
+              Utilisateur
+            </Text>
           </TouchableOpacity>
           
-          {/* Sous-éléments déroulés */}
-          {securityExpanded && (
-            <View style={styles.expandedContent}>
-              <TouchableOpacity style={styles.subMenuItem}>
-                <Ionicons name="shield-checkmark-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
-                <Text style={[styles.subMenuText, { color: colors.text }]}>
-                  Sécurité du compte
+          <TouchableOpacity
+            style={[
+              styles.tabButton,
+              activeTab === 'admin' && styles.activeTabButton,
+              { borderColor: colors.border }
+            ]}
+            onPress={() => setActiveTab('admin')}
+          >
+            <Ionicons 
+              name="shield-checkmark-outline" 
+              size={20} 
+              color={activeTab === 'admin' ? colors.primary : colors.textSecondary} 
+            />
+            <Text style={[
+              styles.tabText,
+              { color: activeTab === 'admin' ? colors.primary : colors.textSecondary }
+            ]}>
+              Administrateur
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* User Tab Content */}
+        {activeTab === 'user' && (
+          <>
+            {/* Mes annonces - Design ultra simple */}
+            <View style={styles.announcementsSection}>
+              <TouchableOpacity
+                style={styles.announcementsCard}
+                onPress={() => navigation.navigate('MyAnnouncements')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="list-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
+                <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+                  Mes annonces ({userProducts.length})
                 </Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Transactions - Design ultra simple */}
+            <View style={styles.announcementsSection}>
+              <TouchableOpacity
+                style={styles.announcementsCard}
+                onPress={() => navigation.navigate('Transactions')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="swap-horizontal-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
+                <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+                  Transactions
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Commandes - Design ultra simple */}
+            <View style={styles.announcementsSection}>
+              <TouchableOpacity
+                style={styles.announcementsCard}
+                onPress={() => navigation.navigate('Orders')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="bag-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
+                <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+                  Commandes
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Paramètres - Design ultra simple avec accordéon */}
+            <View style={styles.announcementsSection}>
+              <TouchableOpacity
+                style={styles.announcementsCard}
+                onPress={() => setSettingsExpanded(!settingsExpanded)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="settings-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
+                <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+                  Paramètres
+                </Text>
+                <Ionicons 
+                  name={settingsExpanded ? "chevron-down" : "chevron-forward"} 
+                  size={20} 
+                  color={colors.textSecondary} 
+                />
               </TouchableOpacity>
               
-              <TouchableOpacity style={styles.subMenuItem}>
-                <Ionicons name="key-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
-                <Text style={[styles.subMenuText, { color: colors.text }]}>
-                  Mot de passe
-                </Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
-              </TouchableOpacity>
-              
-              <TouchableOpacity style={styles.subMenuItem}>
-                <Ionicons name="call-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
-                <Text style={[styles.subMenuText, { color: colors.text }]}>
-                  Numéro de téléphone
-                </Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
-              </TouchableOpacity>
-              
-              <TouchableOpacity style={styles.subMenuItem}>
-                <Ionicons name="lock-closed-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
-                <Text style={[styles.subMenuText, { color: colors.text }]}>
-                  Connexion en 2 étapes
-                </Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
-              </TouchableOpacity>
-              
-              <TouchableOpacity style={styles.subMenuItem}>
-                <Ionicons name="scan-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
-                <View style={styles.menuItemWithBadge}>
-                  <Text style={[styles.subMenuText, { color: colors.text }]}>
-                    Face ID
-                  </Text>
-                  <View style={styles.newBadge}>
-                    <Text style={styles.newBadgeText}>Nouveau</Text>
-                  </View>
+              {/* Sous-éléments déroulés */}
+              {settingsExpanded && (
+                <View style={styles.expandedContent}>
+                  <TouchableOpacity 
+                    style={styles.subMenuItem} 
+                    activeOpacity={0.7}
+                    onPress={() => navigation.navigate('EditProfile')}
+                  >
+                    <Ionicons name="person-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+                    <Text style={[styles.subMenuText, { color: colors.text }]}>
+                      Profil
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={styles.subMenuItem} 
+                    activeOpacity={0.7}
+                    onPress={() => navigation.navigate('EmailSettings')}
+                  >
+                    <Ionicons name="mail-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+                    <Text style={[styles.subMenuText, { color: colors.text }]}>
+                      Email
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={styles.subMenuItem} 
+                    activeOpacity={0.7}
+                    onPress={() => navigation.navigate('PaymentMethods')}
+                  >
+                    <Ionicons name="card-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+                    <Text style={[styles.subMenuText, { color: colors.text }]}>
+                      Moyens de paiement
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={styles.subMenuItem} 
+                    activeOpacity={0.7}
+                    onPress={() => navigation.navigate('NotificationSettings')}
+                  >
+                    <Ionicons name="notifications-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+                    <Text style={[styles.subMenuText, { color: colors.text }]}>
+                      Notifications
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={styles.subMenuItem} 
+                    activeOpacity={0.7}
+                    onPress={() => navigation.navigate('BulkDiscount')}
+                  >
+                    <Ionicons name="pricetag-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+                    <Text style={[styles.subMenuText, { color: colors.text }]}>
+                      Réductions sur les lots
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity style={styles.subMenuItem} activeOpacity={0.7}>
+                    <Ionicons name="shield-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+                    <Text style={[styles.subMenuText, { color: colors.text }]}>
+                      Confidentialité
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity style={styles.subMenuItem} activeOpacity={0.7}>
+                    <Ionicons name="help-circle-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+                    <Text style={[styles.subMenuText, { color: colors.text }]}>
+                      Aide
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+                  </TouchableOpacity>
                 </View>
-                <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+              )}
+            </View>
+
+            {/* Connexion et Sécurité - Menu déroulant */}
+            <View style={styles.announcementsSection}>
+              <TouchableOpacity
+                style={styles.announcementsCard}
+                onPress={() => setSecurityExpanded(!securityExpanded)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="shield-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
+                <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+                  Connexion et Sécurité
+                </Text>
+                <Ionicons 
+                  name={securityExpanded ? "chevron-down" : "chevron-forward"} 
+                  size={20} 
+                  color={colors.textSecondary} 
+                />
               </TouchableOpacity>
               
-              <TouchableOpacity style={styles.subMenuItem}>
-                <Ionicons name="phone-portrait-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
-                <Text style={[styles.subMenuText, { color: colors.text }]}>
-                  Appareils connectés
+              {/* Sous-éléments déroulés */}
+              {securityExpanded && (
+                <View style={styles.expandedContent}>
+                  <TouchableOpacity style={styles.subMenuItem}>
+                    <Ionicons name="shield-checkmark-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+                    <Text style={[styles.subMenuText, { color: colors.text }]}>
+                      Sécurité du compte
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity style={styles.subMenuItem}>
+                    <Ionicons name="key-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+                    <Text style={[styles.subMenuText, { color: colors.text }]}>
+                      Mot de passe
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity style={styles.subMenuItem}>
+                    <Ionicons name="call-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+                    <Text style={[styles.subMenuText, { color: colors.text }]}>
+                      Numéro de téléphone
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity style={styles.subMenuItem}>
+                    <Ionicons name="lock-closed-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+                    <Text style={[styles.subMenuText, { color: colors.text }]}>
+                      Connexion en 2 étapes
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity style={styles.subMenuItem}>
+                    <Ionicons name="scan-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+                    <View style={styles.menuItemWithBadge}>
+                      <Text style={[styles.subMenuText, { color: colors.text }]}>
+                        Face ID
+                      </Text>
+                      <View style={styles.newBadge}>
+                        <Text style={styles.newBadgeText}>Nouveau</Text>
+                      </View>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity style={styles.subMenuItem}>
+                    <Ionicons name="phone-portrait-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+                    <Text style={[styles.subMenuText, { color: colors.text }]}>
+                      Appareils connectés
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+
+            {/* Aide - Menu déroulant */}
+            <View style={styles.announcementsSection}>
+              <TouchableOpacity
+                style={styles.announcementsCard}
+                onPress={() => setHelpExpanded(!helpExpanded)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="help-circle-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
+                <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+                  Aide
                 </Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+                <Ionicons 
+                  name={helpExpanded ? "chevron-down" : "chevron-forward"} 
+                  size={20} 
+                  color={colors.textSecondary} 
+                />
+              </TouchableOpacity>
+              
+              {/* Sous-éléments déroulés */}
+              {helpExpanded && (
+                <View style={styles.expandedContent}>
+                  <TouchableOpacity style={styles.subMenuItem}>
+                    <Ionicons name="sparkles-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+                    <Text style={[styles.subMenuText, { color: colors.text }]}>
+                      Nouveautés
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity style={styles.subMenuItem}>
+                    <Ionicons name="document-text-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+                    <Text style={[styles.subMenuText, { color: colors.text }]}>
+                      Informations légales
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity style={styles.subMenuItem}>
+                    <Ionicons name="information-circle-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
+                    <Text style={[styles.subMenuText, { color: colors.text }]}>
+                      Centre d'aide
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </>
+        )}
+
+        {/* Admin Tab Content */}
+        {activeTab === 'admin' && (
+          <>
+            <View style={styles.announcementsSection}>
+              <TouchableOpacity 
+                style={styles.announcementsCard}
+                onPress={() => navigation.navigate('AdminCategories')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="list-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
+                <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+                  Gestion des catégories
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
-          )}
-        </View>
-
-        {/* Aide - Menu déroulant */}
-        <View style={styles.announcementsSection}>
-          <TouchableOpacity
-            style={styles.announcementsCard}
-            onPress={() => setHelpExpanded(!helpExpanded)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="help-circle-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
-            <Text style={[styles.announcementsTitle, { color: colors.text }]}>
-              Aide
-            </Text>
-            <Ionicons 
-              name={helpExpanded ? "chevron-down" : "chevron-forward"} 
-              size={20} 
-              color={colors.textSecondary} 
-            />
-          </TouchableOpacity>
-          
-          {/* Sous-éléments déroulés */}
-          {helpExpanded && (
-            <View style={styles.expandedContent}>
-              <TouchableOpacity style={styles.subMenuItem}>
-                <Ionicons name="sparkles-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
-                <Text style={[styles.subMenuText, { color: colors.text }]}>
-                  Nouveautés
+            
+            <View style={styles.announcementsSection}>
+              <TouchableOpacity
+                style={styles.announcementsCard}
+                onPress={() => navigation.navigate('AdminAnalytics')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="analytics-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
+                <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+                  Dashboard Analytics
                 </Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
-              </TouchableOpacity>
-              
-              <TouchableOpacity style={styles.subMenuItem}>
-                <Ionicons name="document-text-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
-                <Text style={[styles.subMenuText, { color: colors.text }]}>
-                  Informations légales
-                </Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
-              </TouchableOpacity>
-              
-              <TouchableOpacity style={styles.subMenuItem}>
-                <Ionicons name="information-circle-outline" size={18} color={colors.primary} style={styles.subMenuIcon} />
-                <Text style={[styles.subMenuText, { color: colors.text }]}>
-                  Centre d'aide
-                </Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} style={styles.subMenuArrow} />
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
-          )}
-        </View>
-
-        {/* Admin Section */}
-        {user.role === 'admin' && (
-          <View style={styles.announcementsSection}>
-            <TouchableOpacity
-              style={styles.announcementsCard}
-              onPress={() => navigation.navigate('AdminCategories')}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="settings-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
-              <Text style={[styles.announcementsTitle, { color: colors.text }]}>
-                Gestion des catégories
-              </Text>
-              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
+            
+            <View style={styles.announcementsSection}>
+              <TouchableOpacity
+                style={styles.announcementsCard}
+                onPress={() => navigation.navigate('BoostManagement')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="rocket-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
+                <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+                  Gestion des Boosts
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.announcementsSection}>
+              <TouchableOpacity
+                style={styles.announcementsCard}
+                onPress={() => navigation.navigate('RealTimeMonitoring')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="pulse-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
+                <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+                  Monitoring Temps Réel
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.announcementsSection}>
+              <TouchableOpacity
+                style={styles.announcementsCard}
+                onPress={() => navigation.navigate('UserManagement')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="people-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
+                <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+                  Gestion des Utilisateurs
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.announcementsSection}>
+              <TouchableOpacity
+                style={styles.announcementsCard}
+                onPress={() => navigation.navigate('ProductModeration')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="shield-checkmark-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
+                <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+                  Modération des Produits
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.announcementsSection}>
+              <TouchableOpacity
+                style={styles.announcementsCard}
+                onPress={() => navigation.navigate('AdvancedAnalytics')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="analytics-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
+                <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+                  Statistiques Avancées
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.announcementsSection}>
+              <TouchableOpacity
+                style={styles.announcementsCard}
+                onPress={() => navigation.navigate('FinancialReports')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="trending-up-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
+                <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+                  Rapports Financiers
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.announcementsSection}>
+              <TouchableOpacity
+                style={styles.announcementsCard}
+                onPress={() => navigation.navigate('PlatformSettings')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="settings-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
+                <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+                  Paramètres de la Plateforme
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.announcementsSection}>
+              <TouchableOpacity
+                style={styles.announcementsCard}
+                onPress={() => navigation.navigate('RoleManagement')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="people-circle-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
+                <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+                  Gestion des Rôles & Permissions
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.announcementsSection}>
+              <TouchableOpacity
+                style={styles.announcementsCard}
+                onPress={() => navigation.navigate('SecurityAudit')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="shield-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
+                <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+                  Sécurité & Audit
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.announcementsSection}>
+              <TouchableOpacity
+                style={styles.announcementsCard}
+                onPress={() => navigation.navigate('GDPRCompliance')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="document-text-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
+                <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+                  Conformité & RGPD
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.announcementsSection}>
+              <TouchableOpacity
+                style={styles.announcementsCard}
+                onPress={() => navigation.navigate('NotificationsManagement')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="notifications-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
+                <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+                  Notifications & Communication
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.announcementsSection}>
+              <TouchableOpacity
+                style={styles.announcementsCard}
+                onPress={() => navigation.navigate('SupportTickets')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="help-circle-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
+                <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+                  Support & Tickets
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.announcementsSection}>
+              <TouchableOpacity
+                style={styles.announcementsCard}
+                onPress={() => navigation.navigate('SystemMaintenance')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="construct-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
+                <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+                  Maintenance & Système
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.announcementsSection}>
+              <TouchableOpacity
+                style={styles.announcementsCard}
+                onPress={() => navigation.navigate('APIManagement')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="code-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
+                <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+                  API & Intégrations
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.announcementsSection}>
+              <TouchableOpacity
+                style={styles.announcementsCard}
+                onPress={() => navigation.navigate('PaymentManagement')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="card-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
+                <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+                  Gestion des Paiements
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.announcementsSection}>
+              <TouchableOpacity
+                style={styles.announcementsCard}
+                onPress={() => navigation.navigate('SubscriptionManagement')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="star-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
+                <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+                  Gestion des Abonnements
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.announcementsSection}>
+              <TouchableOpacity
+                style={styles.announcementsCard}
+                onPress={() => navigation.navigate('MarketingPromotions')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="megaphone-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
+                <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+                  Promotions & Marketing
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.announcementsSection}>
+              <TouchableOpacity
+                style={styles.announcementsCard}
+                onPress={() => navigation.navigate('SEOOptimization')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="search-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
+                <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+                  SEO & Référencement
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+          </>
         )}
 
       <ThemeToggle 
@@ -806,5 +1141,63 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 10,
     fontWeight: '600',
+  },
+  adminHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 8,
+  },
+  adminTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 16,
+    marginHorizontal: 16,
+    marginVertical: 16,
+    padding: 4,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  tabButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    marginHorizontal: 4,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  activeTabButton: {
+    backgroundColor: 'white',
+    borderColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
   },
 }); 

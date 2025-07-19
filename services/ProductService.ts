@@ -249,6 +249,11 @@ class ProductService {
     return ApiService.get(`${this.baseUrl}/${productId}/favorite`, true);
   }
 
+  // Mettre à jour le statut d'un produit (pour la modération)
+  async updateProductStatus(productId: number, status: 'approved' | 'rejected' | 'flagged'): Promise<Product> {
+    return ApiService.put(`${this.baseUrl}/${productId}/status`, { status }, true);
+  }
+
   // Récupérer le nombre de favoris pour une liste d'IDs de produits
   async getFavoriteCounts(productIds: number[]): Promise<{ [productId: number]: number }> {
     try {

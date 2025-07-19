@@ -14,6 +14,7 @@ import ArticlesListScreen from '../screens/ArticlesListScreen';
 import CategoryScreen from '../screens/CategoryScreen';
 import CategoriesGridScreen from '../screens/CategoriesGridScreen';
 import FiltersScreen from '../screens/FiltersScreen';
+import ReportProductScreen from '../screens/ReportProductScreen';
 
 const Stack = createStackNavigator();
 
@@ -41,6 +42,7 @@ export default function HomeStack() {
       <Stack.Screen name="Orders" component={OrdersScreen} />
       <Stack.Screen name="Review" component={ReviewScreen} />
       <Stack.Screen name="AuthLanding" component={AuthLandingScreen} />
+      <Stack.Screen name="ReportProduct" component={ReportProductScreen} />
     </Stack.Navigator>
   );
 } 

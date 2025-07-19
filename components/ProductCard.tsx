@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native
 import { Ionicons } from '@expo/vector-icons';
 import AdaptiveImage from './AdaptiveImage';
 import { useTheme } from '../contexts/ThemeContext';
+import InteractionTrackingService from '../services/InteractionTrackingService';
+import { useAuth } from '../contexts/AuthContext';
 
 type Props = {
   title: string;
@@ -18,6 +20,7 @@ type Props = {
   isFavorite?: boolean;
   onFavoritePress?: () => void;
   status?: string;
+  productId?: number; // Ajout de l'ID du produit pour le tracking
 };
 
 // Cache global pour les images déjà chargées
@@ -37,11 +40,15 @@ export default function ProductCard({
   isPro = false,
   isFavorite = false,
   onFavoritePress,
-  status
+  status,
+  productId
 }: Props) {
   const { colors } = useTheme();
+  const { user } = useAuth();
   const [currentImage, setCurrentImage] = useState<string | null>(image);
   const [isImageLoading, setIsImageLoading] = useState(false);
+
+  const trackingService = InteractionTrackingService.getInstance();
 
   // Mettre à jour l'image quand elle change
   useEffect(() => {
@@ -76,8 +83,40 @@ export default function ProductCard({
     return image;
   }, [image]);
 
+  // Fonction pour tracker le clic sur le produit
+  const handleProductPress = () => {
+    // Tracker le clic sur le produit
+    if (productId && user?.id) {
+      trackingService.trackInteraction('CLICK', productId, parseInt(user.id));
+    }
+    
+    // Appeler la fonction onPress originale
+    if (onPress) {
+      onPress();
+    }
+  };
+
+  // Fonction pour tracker les favoris
+  const handleFavoritePress = (e: any) => {
+    e.stopPropagation();
+    
+    // Tracker l'action de favori
+    if (productId && user?.id) {
+      if (isFavorite) {
+        trackingService.trackInteraction('UNFAVORITE', productId, parseInt(user.id));
+      } else {
+        trackingService.trackInteraction('FAVORITE', productId, parseInt(user.id));
+      }
+    }
+    
+    // Appeler la fonction onFavoritePress originale
+    if (onFavoritePress) {
+      onFavoritePress();
+    }
+  };
+
   return (
-    <TouchableOpacity style={[styles.card, { backgroundColor: colors.card }]} onPress={onPress} activeOpacity={0.85}>
+    <TouchableOpacity style={[styles.card, { backgroundColor: colors.card }]} onPress={handleProductPress} activeOpacity={0.85}>
       <View style={[styles.imageContainer, { backgroundColor: colors.border }]}>
         {cachedImage ? (
           <AdaptiveImage 
@@ -117,10 +156,7 @@ export default function ProductCard({
         )}
         <TouchableOpacity 
           style={styles.likesBadgeTopRight}
-          onPress={(e) => {
-            e.stopPropagation();
-            if (onFavoritePress) onFavoritePress();
-          }}
+          onPress={handleFavoritePress}
           activeOpacity={0.7}
         >
           <Ionicons 

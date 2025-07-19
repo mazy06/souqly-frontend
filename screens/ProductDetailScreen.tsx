@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import ProductService, { Product } from '../services/ProductService';
 import ConversationService from '../services/ConversationService';
 import LocationService, { DistanceData } from '../services/LocationService';
+import InteractionTrackingService from '../services/InteractionTrackingService';
 import ProductHeader from '../components/ProductHeader';
 import ProductActions from '../components/ProductActions';
 import ProductSellerCard from '../components/ProductSellerCard';
@@ -66,6 +67,8 @@ export default function ProductDetailScreen() {
   const [seller, setSeller] = useState<any>(null);
   const insets = useSafeAreaInsets();
 
+  const trackingService = InteractionTrackingService.getInstance();
+
   useEffect(() => {
     if (!productId) return;
     
@@ -76,6 +79,11 @@ export default function ProductDetailScreen() {
         // Charger le produit
         const productData = await ProductService.getProduct(parseInt(productId));
         setProduct(productData);
+        
+        // Tracker la vue du produit
+        if (user?.id) {
+          trackingService.trackProductView(parseInt(productId), parseInt(user.id));
+        }
         
         // Incrémenter le compteur de vues seulement si l'utilisateur est connecté
         if (isAuthenticated && !isGuest) {
@@ -225,7 +233,28 @@ export default function ProductDetailScreen() {
   };
 
   const handleReportPress = () => {
-    Alert.alert('Signaler', 'Fonctionnalité de signalement à implémenter');
+    if (!isAuthenticated || isGuest) {
+      Alert.alert(
+        'Connexion requise',
+        'Vous devez être connecté pour signaler un produit',
+        [
+          { text: 'Annuler', style: 'cancel' },
+          { text: 'Se connecter', onPress: () => navigation.navigate('AuthLanding') }
+        ]
+      );
+      return;
+    }
+
+    if (!product) {
+      Alert.alert('Erreur', 'Impossible de signaler ce produit');
+      return;
+    }
+
+    // Navigation vers l'écran de signalement
+    navigation.navigate('ReportProduct', {
+      productId: productId!,
+      productTitle: product.title
+    });
   };
 
   const handleHelpPress = () => {
@@ -315,6 +344,15 @@ export default function ProductDetailScreen() {
       const result = await ProductService.toggleFavorite(parseInt(productId));
       setIsFavorite(result.isFavorite);
       setFavoritesCount(result.favoriteCount);
+      
+      // Tracker l'action de favori
+      if (user?.id) {
+        if (result.isFavorite) {
+          trackingService.trackInteraction('FAVORITE', parseInt(productId), parseInt(user.id));
+        } else {
+          trackingService.trackInteraction('UNFAVORITE', parseInt(productId), parseInt(user.id));
+        }
+      }
     } catch (error) {
       Alert.alert('Erreur', 'Impossible de modifier les favoris pour le moment');
     } finally {

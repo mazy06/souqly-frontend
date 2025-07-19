@@ -1,67 +1,65 @@
 import ApiService from './ApiService';
 
-export interface Review {
-  id: number;
+interface ReviewData {
   productId: number;
   sellerId: number;
-  buyerId: number;
   rating: number;
   comment: string;
   transactionId: string;
-  createdAt: string;
-  buyerName?: string;
 }
 
-export interface SellerRating {
-  averageRating: number;
-  totalReviews: number;
-  recentReviews: Review[];
+interface ReviewResponse {
+  success: boolean;
+  message?: string;
+  reviewId?: number;
 }
 
 class ReviewService {
   /**
-   * Récupère tous les commentaires d'un vendeur
+   * Soumet un avis pour un produit
    */
-  async getSellerReviews(sellerId: number): Promise<Review[]> {
+  static async submitReview(reviewData: ReviewData): Promise<ReviewResponse> {
     try {
-      const response = await ApiService.get(`/reviews/seller/${sellerId}`) as { data: Review[] };
-      return response.data;
-    } catch (error) {
-      console.error('Erreur lors de la récupération des commentaires du vendeur:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Récupère la note moyenne et les commentaires récents d'un vendeur
-   */
-  async getSellerRating(sellerId: number): Promise<SellerRating> {
-    try {
-      const response = await ApiService.get(`/reviews/seller/${sellerId}/rating`) as { data: SellerRating };
-      return response.data;
-    } catch (error) {
-      console.error('Erreur lors de la récupération de la note du vendeur:', error);
-      // Retourner des valeurs par défaut en cas d'erreur
+      const response = await ApiService.post('/reviews', reviewData) as any;
       return {
-        averageRating: 0,
-        totalReviews: 0,
-        recentReviews: []
+        success: true,
+        reviewId: response.data.id,
+        message: 'Avis soumis avec succès'
+      };
+    } catch (error) {
+      console.error('Erreur soumission avis:', error);
+      return {
+        success: false,
+        message: 'Impossible de soumettre l\'avis'
       };
     }
   }
 
   /**
-   * Crée un nouveau commentaire
+   * Obtient les avis d'un produit
    */
-  async createReview(reviewData: Omit<Review, 'id' | 'createdAt'>): Promise<Review> {
+  static async getProductReviews(productId: number): Promise<any[]> {
     try {
-      const response = await ApiService.post('/reviews', reviewData) as { data: Review };
+      const response = await ApiService.get(`/reviews/product/${productId}`) as any;
       return response.data;
     } catch (error) {
-      console.error('Erreur lors de la création du commentaire:', error);
-      throw error;
+      console.error('Erreur récupération avis:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Obtient les avis d'un vendeur
+   */
+  static async getSellerReviews(sellerId: number): Promise<any[]> {
+    try {
+      const response = await ApiService.get(`/reviews/seller/${sellerId}`) as any;
+      return response.data;
+    } catch (error) {
+      console.error('Erreur récupération avis vendeur:', error);
+      return [];
     }
   }
 }
 
-export default new ReviewService(); 
+export default ReviewService; 
