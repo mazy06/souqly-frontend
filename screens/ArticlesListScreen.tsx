@@ -7,6 +7,7 @@ import PrimaryButton from '../components/PrimaryButton';
 import { useAuth } from '../contexts/AuthContext';
 import VisitorBadge from '../components/VisitorBadge';
 import ProductService, { Product } from '../services/ProductService';
+import CategoryService, { Category } from '../services/CategoryService';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -60,6 +61,7 @@ export default function ArticlesListScreen() {
   const [imageUrls, setImageUrls] = useState<{[key: number]: string | null}>({});
   const [favoriteCounts, setFavoriteCounts] = useState<{ [productId: number]: number }>({});
   const [displayStyle, setDisplayStyle] = useState<'pinterest' | 'ecommerce'>('pinterest');
+  const [categoryId, setCategoryId] = useState<number | null>(null);
 
   const loadProducts = async (page: number = 0, append: boolean = false) => {
     console.log(`[DEBUG] loadProducts appelée - page: ${page}, append: ${append}, loading: ${loading}`);
@@ -77,11 +79,26 @@ export default function ArticlesListScreen() {
         setError(null);
       }
       
+      // Récupérer l'ID de la catégorie si on a une clé
+      let categoryIdToUse = categoryId;
+      if (selectedCategory && !categoryIdToUse) {
+        try {
+          const category = await CategoryService.getCategoryByKey(selectedCategory);
+          if (category) {
+            categoryIdToUse = category.id;
+            setCategoryId(category.id);
+            console.log(`[DEBUG] Catégorie trouvée: ${category.label} (ID: ${category.id})`);
+          }
+        } catch (error) {
+          console.log(`[DEBUG] Erreur récupération catégorie ${selectedCategory}:`, error);
+        }
+      }
+      
       console.log('[DEBUG] loadProducts - Appel de ProductService.getProducts');
       const response = await ProductService.getProducts({
         page,
         pageSize: 20,
-        ...(selectedCategory && { categoryKey: selectedCategory.toLowerCase() }),
+        ...(categoryIdToUse && { categoryId: categoryIdToUse }),
         ...(search && { search }),
         ...(selectedFilter && selectedFilter !== 'Voir tout' && { filter: selectedFilter })
       });

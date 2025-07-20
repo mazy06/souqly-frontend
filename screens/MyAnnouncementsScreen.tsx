@@ -18,7 +18,7 @@ interface Announcement {
   createdAt: string;
   images?: ProductImage[];
   favoriteCount: number;
-  viewCount: number;
+  // viewCount n'est pas retourné par le backend, on l'utilise pas
 }
 
 interface ProductImage {
@@ -126,7 +126,7 @@ export default function MyAnnouncementsScreen() {
           <View style={styles.statItem}>
             <Ionicons name="eye" size={12} color={colors.textSecondary} />
             <Text style={[styles.statText, { color: colors.textSecondary }]}>
-              {item.viewCount || 0}
+              0
             </Text>
           </View>
         </View>
@@ -209,7 +209,7 @@ export default function MyAnnouncementsScreen() {
       <FlatList
         data={getCurrentAnnouncements()}
         renderItem={renderAnnouncement}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item) => item.id?.toString() || 'unknown'}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={() => renderEmptyState(activeTab)}
