@@ -55,75 +55,14 @@ export default function HomeScreen() {
   
   // États pour les différentes sections
   const [favorites, setFavorites] = useState<Product[]>([]);
-  const [recentSearches, setRecentSearches] = useState<Product[]>([]);
-  const [recentlyViewed, setRecentlyViewed] = useState<Product[]>([]);
   const [recentProducts, setRecentProducts] = useState<Product[]>([]);
-  const [nearbyProducts, setNearbyProducts] = useState<Product[]>([]);
   const [featuredCategories, setFeaturedCategories] = useState<{
     [category: string]: Product[]
   }>({});
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
 
-  // Fonction pour charger les produits récemment vus
-  const loadRecentlyViewed = async (): Promise<Product[]> => {
-    try {
-      // Pour l'instant, retourner les produits récents
-      // TODO: Implémenter un vrai système de produits récemment vus
-      const response = await ProductService.getProductsCacheable({ 
-        page: 0, 
-        pageSize: 5,
-        sortBy: 'createdAt',
-        sortOrder: 'desc'
-      });
-      return response.content || [];
-    } catch (error) {
-      console.log('Erreur chargement produits récemment vus:', error);
-      return [];
-    }
-  };
 
-  // Fonction pour charger les produits basés sur les recherches récentes
-  const loadRecentSearches = async (): Promise<Product[]> => {
-    try {
-      // Pour l'instant, retourner des produits populaires
-      // TODO: Implémenter un vrai système de recommandations basé sur les recherches
-      const response = await ProductService.getProductsCacheable({ 
-        page: 0, 
-        pageSize: 5,
-        sortBy: 'favoriteCount',
-        sortOrder: 'desc'
-      });
-      return response.content || [];
-    } catch (error) {
-      console.log('Erreur chargement recherches récentes:', error);
-      return [];
-    }
-  };
-
-  // Fonction pour charger les produits locaux
-  const loadNearbyProducts = async (): Promise<Product[]> => {
-    try {
-      // Pour l'instant, retourner des produits avec localisation
-      // TODO: Implémenter un vrai système de géolocalisation
-      const response = await ProductService.getProductsCacheable({ 
-        page: 0, 
-        pageSize: 5,
-        sortBy: 'createdAt',
-        sortOrder: 'desc'
-      });
-      
-      // Filtrer les produits avec localisation
-      const nearbyProducts = (response.content || []).filter(product => 
-        product.city || product.locationName
-      );
-      
-      return nearbyProducts;
-    } catch (error) {
-      console.log('Erreur chargement produits locaux:', error);
-      return [];
-    }
-  };
 
   // Fonction pour filtrer les produits selon les nouveaux filtres de recherche
   const getFilteredProducts = (products: Product[], filter: string) => {
@@ -184,7 +123,7 @@ export default function HomeScreen() {
       setIsInitialLoad(false);
       
       // Charger toutes les données en parallèle pour améliorer les performances
-      const [favoritesList, recentResponse, featuredData, categoriesData, recentlyViewedData, recentSearchesData, nearbyData] = await Promise.allSettled([
+      const [favoritesList, recentResponse, featuredData, categoriesData] = await Promise.allSettled([
         // Charger les favoris (si connecté)
         isAuthenticated && !isGuest ? ProductService.getFavorites() : Promise.resolve([]),
         
@@ -216,15 +155,6 @@ export default function HomeScreen() {
         
         // Charger les catégories
         CategoryService.getAllCategories(),
-        
-        // Charger les produits récemment vus
-        loadRecentlyViewed(),
-        
-        // Charger les produits basés sur les recherches récentes
-        loadRecentSearches(),
-        
-        // Charger les produits locaux
-        loadNearbyProducts(),
       ]);
       
       // Traiter les résultats
@@ -245,25 +175,10 @@ export default function HomeScreen() {
         setCategoriesLoading(false);
       }
       
-      if (recentlyViewedData.status === 'fulfilled') {
-        setRecentlyViewed(recentlyViewedData.value);
-      }
-      
-      if (recentSearchesData.status === 'fulfilled') {
-        setRecentSearches(recentSearchesData.value);
-      }
-      
-      if (nearbyData.status === 'fulfilled') {
-        setNearbyProducts(nearbyData.value);
-      }
-      
       // Charger les URLs d'images et compteurs de favoris
       const allProducts = [
         ...(recentResponse.status === 'fulfilled' ? recentResponse.value.content || [] : []),
         ...(favoritesList.status === 'fulfilled' ? favoritesList.value : []),
-        ...(recentlyViewedData.status === 'fulfilled' ? recentlyViewedData.value : []),
-        ...(recentSearchesData.status === 'fulfilled' ? recentSearchesData.value : []),
-        ...(nearbyData.status === 'fulfilled' ? nearbyData.value : []),
       ];
       
       await Promise.all([
@@ -492,19 +407,13 @@ export default function HomeScreen() {
   };
 
   const handleViewAllRecent = () => {
-    // Navigation vers l'écran de recherche avec le filtre actuel
-    navigation.navigate('SearchResults', { 
-      query: '', 
-      category: selectedFilter !== 'Voir tout' ? selectedFilter : undefined 
-    });
+    // Navigation vers l'écran de tous les articles
+    navigation.navigate('ArticlesList');
   };
 
   const handleViewAllCategory = (category: string) => {
-    // Navigation vers l'écran de recherche avec la catégorie pré-sélectionnée
-    navigation.navigate('SearchResults', { 
-      query: '', 
-      category: category 
-    });
+    // Navigation vers l'écran de tous les articles
+    navigation.navigate('ArticlesList');
   };
 
   const handleCategoryPress = (category: Category) => {
@@ -600,10 +509,7 @@ export default function HomeScreen() {
             showBoostedBadge={true}
             onProductPress={handleProductPress}
             onFavoritePress={handleFavoritePress}
-            onViewAllPress={() => navigation.navigate('SearchResults', { 
-              query: 'recommandés', 
-              category: undefined
-            })}
+            onViewAllPress={() => navigation.navigate('ArticlesList')}
           />
         )}
 
@@ -622,42 +528,6 @@ export default function HomeScreen() {
           />
         )}
 
-        {/* Dernières recherches */}
-        {recentSearches.length > 0 && (
-          <SpecialProductList
-            type="recommended"
-            products={recentSearches}
-            onProductPress={handleProductPress}
-            onFavoritePress={handleFavoritePress}
-            onViewAllPress={() => navigation.navigate('SearchResults', { 
-              query: 'recommandés', 
-              category: undefined
-            })}
-            imageUrls={imageUrls}
-            favoriteCounts={favoriteCounts}
-            isFavorite={isFavorite}
-            maxItems={5}
-          />
-        )}
-
-        {/* Récemment vus */}
-        {recentlyViewed.length > 0 && (
-          <SpecialProductList
-            type="recent"
-            products={recentlyViewed}
-            onProductPress={handleProductPress}
-            onFavoritePress={handleFavoritePress}
-            onViewAllPress={() => navigation.navigate('SearchResults', { 
-              query: 'récemment vus', 
-              category: undefined
-            })}
-            imageUrls={imageUrls}
-            favoriteCounts={favoriteCounts}
-            isFavorite={isFavorite}
-            maxItems={5}
-          />
-        )}
-
         {/* Produits récents */}
         {recentProducts.length > 0 && (
           <SpecialProductList
@@ -665,25 +535,7 @@ export default function HomeScreen() {
             products={recentProducts}
             onProductPress={handleProductPress}
             onFavoritePress={handleFavoritePress}
-            onViewAllPress={handleViewAllRecent}
-            imageUrls={imageUrls}
-            favoriteCounts={favoriteCounts}
-            isFavorite={isFavorite}
-            maxItems={5}
-          />
-        )}
-
-        {/* Produits locaux */}
-        {nearbyProducts.length > 0 && (
-          <SpecialProductList
-            type="nearby"
-            products={nearbyProducts}
-            onProductPress={handleProductPress}
-            onFavoritePress={handleFavoritePress}
-            onViewAllPress={() => navigation.navigate('SearchResults', { 
-              query: 'près de chez vous', 
-              category: undefined
-            })}
+            onViewAllPress={() => navigation.navigate('ArticlesList')}
             imageUrls={imageUrls}
             favoriteCounts={favoriteCounts}
             isFavorite={isFavorite}

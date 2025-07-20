@@ -71,16 +71,18 @@ export default function SpecialProductList({
   const { colors } = useTheme();
   const config = specialConfig[type];
 
-  const displayProducts = products.slice(0, maxItems);
+  const displayProducts = products
+    .filter(product => product && product.id && product.title) // Filtrer les produits invalides
+    .slice(0, maxItems);
 
   const renderProduct = ({ item }: { item: Product }) => (
     <View style={styles.productContainer}>
       <ProductCard
-        title={item.title}
-        brand={item.brand}
-        size={item.size}
-        condition={item.condition}
-        price={formatAmount(item.price)}
+        title={item.title || 'Produit sans titre'}
+        brand={item.brand || ''}
+        size={item.size || ''}
+        condition={item.condition || ''}
+        price={formatAmount(item.price || 0)}
         priceWithFees={item.priceWithFees ? formatAmount(item.priceWithFees) : undefined}
         image={imageUrls[item.id]}
         likes={favoriteCounts[item.id] || 0}
@@ -195,7 +197,6 @@ const styles = StyleSheet.create({
   },
   productContainer: {
     marginRight: 12,
-    width: 160,
   },
   emptyState: {
     alignItems: 'center',

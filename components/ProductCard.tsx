@@ -43,6 +43,7 @@ export default function ProductCard({
   status,
   productId
 }: Props) {
+
   const { colors } = useTheme();
   const { user } = useAuth();
   const [currentImage, setCurrentImage] = useState<string | null>(image);
@@ -136,26 +137,38 @@ export default function ProductCard({
             }}
           />
         ) : isImageLoading ? (
-          <View style={[styles.image, { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' }]}>
-            <Text style={{ color: '#999', fontSize: 12 }}>Chargement...</Text>
+          <View style={[styles.image, { backgroundColor: colors.border, justifyContent: 'center', alignItems: 'center' }]}>
+            <View style={styles.imagePlaceholder}>
+              <Ionicons name="image-outline" size={32} color={colors.tabIconDefault} />
+              <Text style={[styles.placeholderText, { color: colors.tabIconDefault }]}>Image</Text>
+            </View>
           </View>
         ) : (
-          <View style={[styles.image, { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' }]}>
-            <Text style={{ color: '#999', fontSize: 12 }}>Pas d'image</Text>
+          <View style={[styles.image, { backgroundColor: colors.border, justifyContent: 'center', alignItems: 'center' }]}>
+            <View style={styles.imagePlaceholder}>
+              <Ionicons name="image-outline" size={32} color={colors.tabIconDefault} />
+              <Text style={[styles.placeholderText, { color: colors.tabIconDefault }]}>Image</Text>
+            </View>
           </View>
         )}
+        
+        {/* Badge Pro */}
         {isPro && (
           <View style={[styles.proBadge, { backgroundColor: colors.primary }]}>
             <Text style={styles.proText}>Pro</Text>
           </View>
         )}
+        
+        {/* Badge Vendu */}
         {status === 'sold' && (
-          <View style={[styles.soldBadge, { backgroundColor: '#ff6b6b' }]}>
+          <View style={[styles.soldBadge, { backgroundColor: colors.danger }]}>
             <Text style={styles.soldText}>Vendu</Text>
           </View>
         )}
+        
+        {/* Badge Favoris */}
         <TouchableOpacity 
-          style={styles.likesBadgeTopRight}
+          style={[styles.likesBadgeTopRight, { backgroundColor: 'rgba(0,0,0,0.7)' }]}
           onPress={handleFavoritePress}
           activeOpacity={0.7}
         >
@@ -167,22 +180,42 @@ export default function ProductCard({
           <Text style={styles.likesText}>{likes}</Text>
         </TouchableOpacity>
       </View>
-      {brand && <Text style={[styles.brand, { color: colors.text }]} numberOfLines={1}>{brand}</Text>}
-      <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>{title}</Text>
-      <Text style={[styles.details, { color: colors.tabIconDefault }]} numberOfLines={1}>
-        {size ? size + ' · ' : ''}{condition}
-      </Text>
+      
+      {/* Contenu de la carte */}
+      <View style={styles.cardContent}>
+        <Text style={[styles.brand, { color: colors.textSecondary }]} numberOfLines={1}>
+          {brand || 'Marque'}
+        </Text>
+        <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
+          {title || 'Titre de l\'article'}
+        </Text>
+        <Text style={[styles.details, { color: colors.tabIconDefault }]} numberOfLines={1}>
+          {size ? size + ' · ' : ''}{condition || 'État non précisé'}
+        </Text>
+        
+        {/* Prix */}
+        <View style={styles.priceContainer}>
+          <Text style={[styles.price, { color: colors.primary }]}>
+            {price || 'Prix'} €
+          </Text>
+          {priceWithFees && (
+            <Text style={[styles.priceWithFees, { color: colors.textSecondary }]}>
+              {priceWithFees} €
+            </Text>
+          )}
+        </View>
+      </View>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    flex: 1,
+    width: 160,
+    height: 280, // Hauteur fixe pour éviter les variations
     margin: 8,
     overflow: 'hidden',
-    minWidth: 160,
-    maxWidth: '48%',
+    borderRadius: 8,
     ...(Platform.OS === 'web' ? {
       boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
     } : {
@@ -202,13 +235,19 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     left: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   proText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 12,
+    fontSize: 10,
   },
   soldBadge: {
     position: 'absolute',
@@ -217,23 +256,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   soldText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 12,
+    fontSize: 10,
   },
   likesBadgeTopRight: {
     position: 'absolute',
     top: 8,
     right: 8,
-    backgroundColor: 'rgba(0,0,0,0.6)',
     borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 4,
     zIndex: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   likesText: {
     color: '#fff',
@@ -242,23 +290,53 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   brand: {
-    fontWeight: '500',
-    fontSize: 13,
-    marginTop: 8,
-    marginHorizontal: 8,
-    marginBottom: 0,
-    opacity: 0.85,
+    fontWeight: '600',
+    fontSize: 12,
+    marginBottom: 4,
+    opacity: 0.8,
+    minHeight: 16, // Hauteur minimale fixe
+    lineHeight: 16, // Alignement du texte
   },
   title: {
-    fontWeight: '600',
-    fontSize: 15,
-    marginTop: 2,
-    marginHorizontal: 8,
-    marginBottom: 0,
+    fontWeight: '700',
+    fontSize: 14,
+    marginBottom: 4,
+    minHeight: 18, // Hauteur minimale fixe pour 1 ligne
+    lineHeight: 18, // Alignement du texte
   },
   details: {
-    fontSize: 13,
-    marginHorizontal: 8,
-    marginBottom: 2,
+    fontSize: 12,
+    marginBottom: 8,
+    minHeight: 16, // Hauteur minimale fixe
+    lineHeight: 16, // Alignement du texte
+    opacity: 0.7,
+  },
+  cardContent: {
+    flex: 1,
+    padding: 12,
+    justifyContent: 'space-between',
+  },
+  priceContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginTop: 4,
+  },
+  price: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginRight: 4,
+  },
+  priceWithFees: {
+    fontSize: 12,
+    textDecorationLine: 'line-through',
+  },
+  imagePlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  placeholderText: {
+    fontSize: 12,
+    marginTop: 4,
+    opacity: 0.7,
   },
 }); 

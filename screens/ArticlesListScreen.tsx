@@ -15,6 +15,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { getImageUrl } from '../constants/Config';
 import SearchBar from '../components/SearchBar';
 import FilterChips from '../components/FilterChips';
+import { Ionicons } from '@expo/vector-icons';
+import AdaptiveImage from '../components/AdaptiveImage';
 
 // Types pour la navigation
 export type ArticlesListStackParamList = {
@@ -49,6 +51,7 @@ export default function ArticlesListScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [imageUrls, setImageUrls] = useState<{[key: number]: string}>({});
   const [favoriteCounts, setFavoriteCounts] = useState<{ [productId: number]: number }>({});
+  const [displayStyle, setDisplayStyle] = useState<'pinterest' | 'ecommerce'>('pinterest');
 
   const loadProducts = async (page: number = 0, append: boolean = false) => {
     try {
@@ -268,21 +271,95 @@ export default function ArticlesListScreen() {
     }
   };
 
-  const renderProduct = ({ item }: { item: Product }) => (
-    <ProductCard
-      title={item.title}
-      brand={item.brand}
-      size={item.size}
-      condition={item.condition}
-      price={item.price.toString()}
-      priceWithFees={item.priceWithFees?.toString()}
-      image={imageUrls[item.id] || (item.images && item.images.length > 0 ? getImageUrl(item.images[0].id) : 'https://via.placeholder.com/120')}
-      likes={favoriteCounts[item.id] || 0}
-      isFavorite={isFavorite(item.id)}
-      onPress={() => handleProductPress(item.id)}
-      onFavoritePress={() => handleFavoritePress(item.id)}
-    />
+  const renderProductPinterest = ({ item }: { item: Product }) => (
+    <View style={styles.pinterestCard}>
+      <TouchableOpacity 
+        style={[styles.pinterestCardContent, { backgroundColor: colors.card }]}
+        onPress={() => handleProductPress(item.id)}
+        activeOpacity={0.85}
+      >
+        <View style={styles.pinterestImageContainer}>
+          <AdaptiveImage
+            source={{ uri: imageUrls[item.id] || (item.images && item.images.length > 0 ? getImageUrl(item.images[0].id) : 'https://via.placeholder.com/120') }}
+            style={styles.pinterestImage}
+          />
+          <TouchableOpacity 
+            style={styles.pinterestFavoriteButton}
+            onPress={() => handleFavoritePress(item.id)}
+          >
+            <Ionicons 
+              name={isFavorite(item.id) ? "heart" : "heart-outline"} 
+              size={14} 
+              color={isFavorite(item.id) ? "#ff4757" : colors.textSecondary} 
+            />
+          </TouchableOpacity>
+          {favoriteCounts[item.id] > 0 && (
+            <View style={styles.pinterestLikesBadge}>
+              <Text style={styles.pinterestLikesText}>{favoriteCounts[item.id]}</Text>
+            </View>
+          )}
+        </View>
+        <View style={styles.pinterestInfo}>
+          <Text style={[styles.pinterestBrand, { color: colors.textSecondary }]} numberOfLines={1}>
+            {item.brand || 'Marque'}
+          </Text>
+          <Text style={[styles.pinterestTitle, { color: colors.text }]} numberOfLines={1}>
+            {item.title || 'Titre du produit'}
+          </Text>
+          <Text style={[styles.pinterestCondition, { color: colors.textSecondary }]} numberOfLines={1}>
+            {item.condition || 'État non précisé'}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    </View>
   );
+
+  const renderProductEcommerce = ({ item }: { item: Product }) => (
+    <View style={styles.ecommerceCard}>
+      <TouchableOpacity 
+        style={[styles.ecommerceCardContent, { backgroundColor: colors.card }]}
+        onPress={() => handleProductPress(item.id)}
+      >
+        <View style={styles.ecommerceImageContainer}>
+          <AdaptiveImage
+            source={{ uri: imageUrls[item.id] || (item.images && item.images.length > 0 ? getImageUrl(item.images[0].id) : 'https://via.placeholder.com/120') }}
+            style={styles.ecommerceImage}
+          />
+          <TouchableOpacity 
+            style={styles.ecommerceFavoriteButton}
+            onPress={() => handleFavoritePress(item.id)}
+          >
+            <Ionicons 
+              name={isFavorite(item.id) ? "heart" : "heart-outline"} 
+              size={20} 
+              color={isFavorite(item.id) ? "#ff4757" : colors.textSecondary} 
+            />
+          </TouchableOpacity>
+          {favoriteCounts[item.id] > 0 && (
+            <View style={styles.ecommerceLikesBadge}>
+              <Text style={styles.ecommerceLikesText}>{favoriteCounts[item.id]}</Text>
+            </View>
+          )}
+        </View>
+        <View style={styles.ecommerceInfo}>
+          <Text style={[styles.ecommerceBrand, { color: colors.textSecondary }]} numberOfLines={1}>
+            {item.brand || 'Marque'}
+          </Text>
+          <Text style={[styles.ecommerceTitle, { color: colors.text }]} numberOfLines={2}>
+            {item.title || 'Titre du produit'}
+          </Text>
+          <Text style={[styles.ecommerceCondition, { color: colors.textSecondary }]} numberOfLines={1}>
+            {item.condition || 'État non précisé'}
+          </Text>
+          <Text style={[styles.ecommercePrice, { color: colors.primary }]} numberOfLines={1}>
+            {item.price ? `${item.price}€` : 'Prix non précisé'}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderProduct = displayStyle === 'pinterest' ? renderProductPinterest : renderProductEcommerce;
 
   // Si l'utilisateur n'est pas connecté, afficher un message d'authentification
   if (!isAuthenticated && !isGuest) {
@@ -349,25 +426,62 @@ export default function ArticlesListScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top','left','right']}>
       <FlatList
+        key={displayStyle} // Force re-render when style changes
         data={products}
         keyExtractor={item => item.id.toString()}
-        numColumns={2}
-        contentContainerStyle={styles.gridContent}
+        numColumns={displayStyle === 'pinterest' ? 3 : 1}
+        contentContainerStyle={styles.unifiedContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         renderItem={renderProduct}
         ListHeaderComponent={
           <View>
+            {/* Header avec retour et switch */}
+            <View style={styles.header}>
+              <TouchableOpacity 
+                style={styles.backButton}
+                onPress={() => navigation.goBack()}
+              >
+                <Ionicons name="arrow-back" size={24} color={colors.text} />
+              </TouchableOpacity>
+              
+              <Text style={[styles.headerTitle, { color: colors.text }]}>
+                Tous les articles
+              </Text>
+              
+              <TouchableOpacity 
+                style={styles.switchButton}
+                onPress={() => setDisplayStyle(displayStyle === 'pinterest' ? 'ecommerce' : 'pinterest')}
+              >
+                <Ionicons 
+                  name={displayStyle === 'pinterest' ? "grid-outline" : "list-outline"} 
+                  size={20} 
+                  color={colors.primary} 
+                />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.headerSpacer} />
             <VisitorBadge onSignup={() => logout()} />
             <SearchBar 
               value={search} 
               onChangeText={setSearch}
-              onPressCamera={handleCameraPress}
-              onSubmit={handleSearchSubmit}
             />
-            <FilterChips selected={selectedFilter} onSelect={setSelectedFilter} />
-            <Text style={{ color: colors.text, fontWeight: 'bold', fontSize: 20, margin: 8 }}>Recommandé pour toi</Text>
+            <View style={styles.filtersContainer}>
+              <FilterChips 
+                filters={[
+                  { key: 'Voir tout', label: 'Voir tout' },
+                  { key: 'Nouveaux', label: 'Nouveaux' },
+                  { key: 'Populaires', label: 'Populaires' },
+                  { key: 'Prix bas', label: 'Prix bas' },
+                  { key: 'Prix haut', label: 'Prix haut' }
+                ]}
+                selectedFilter={selectedFilter}
+                onFilterSelect={setSelectedFilter}
+                showTitle={false}
+              />
+            </View>
           </View>
         }
         showsVerticalScrollIndicator={false}
@@ -422,8 +536,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
-  gridContent: {
-    padding: 8,
+  unifiedContent: {
+    padding: 16,
   },
   skeletonContainer: {
     flex: 1,
@@ -459,5 +573,175 @@ const styles = StyleSheet.create({
   retryButtonText: {
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  // Styles Pinterest
+  pinterestCard: {
+    width: '33.33%',
+    padding: 4,
+  },
+  pinterestCardContent: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  pinterestImageContainer: {
+    position: 'relative',
+    width: '100%',
+    height: 100,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  pinterestImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
+  },
+  pinterestFavoriteButton: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pinterestLikesBadge: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+  },
+  pinterestLikesText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  pinterestInfo: {
+    padding: 6,
+  },
+  pinterestBrand: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  pinterestTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 2,
+    lineHeight: 16,
+  },
+  pinterestCondition: {
+    fontSize: 10,
+    marginTop: 2,
+  },
+  // Styles E-commerce
+  ecommerceCard: {
+    marginBottom: 16,
+  },
+  ecommerceCardContent: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  ecommerceImageContainer: {
+    position: 'relative',
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginRight: 12,
+  },
+  ecommerceImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
+  },
+  ecommerceFavoriteButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 15,
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  ecommerceLikesBadge: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  ecommerceLikesText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  ecommerceInfo: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  ecommerceBrand: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  ecommerceTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+    lineHeight: 20,
+  },
+  ecommerceCondition: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  ecommercePrice: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    flex: 1,
+    textAlign: 'center',
+  },
+  // Bouton de switch
+  switchButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+  },
+  // Conteneur des filtres
+  filtersContainer: {
+    marginBottom: 16,
+  },
+  // Espace après le header
+  headerSpacer: {
+    height: 12,
   },
 }); 

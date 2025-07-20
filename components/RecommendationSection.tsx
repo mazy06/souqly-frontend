@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -122,52 +122,72 @@ export default function RecommendationSection({
     );
   }
 
+  const displayProducts = recommendations
+    .filter(product => product && product.id && product.title) // Filtrer les produits invalides
+    .slice(0, 6); // Limiter à 6 produits
+
+  const renderProduct = ({ item }: { item: Product }) => (
+    <View style={styles.productContainer}>
+      <ProductCard
+        title={item.title || 'Produit sans titre'}
+        brand={item.brand || ''}
+        size={item.size || ''}
+        condition={item.condition || ''}
+        price={item.price ? item.price.toString() : '0'}
+        priceWithFees={item.priceWithFees?.toString()}
+        image={item.images && item.images.length > 0 ? 
+          ProductService.getImageUrl(item.images[0].id) : null}
+        likes={item.favoriteCount || 0}
+        isPro={false}
+        isFavorite={false}
+        status={item.status}
+        productId={item.id}
+        onPress={() => handleProductPress(item.id)}
+        onFavoritePress={() => handleFavoritePress(item.id)}
+      />
+      {showBoostedBadge && boostedProducts.includes(item.id) && (
+        <View style={[styles.boostedBadge, { backgroundColor: '#FF9800' }]}>
+          <Ionicons name="trending-up" size={12} color="#fff" />
+          <Text style={styles.boostedText}>Boosté</Text>
+        </View>
+      )}
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.titleContainer}>
-          <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
-          {subtitle && (
-            <Text style={[styles.subtitle, { color: colors.tabIconDefault }]}>{subtitle}</Text>
-          )}
+          <View style={[styles.specialIcon, { backgroundColor: '#FF9800' + '20' }]}>
+            <Ionicons 
+              name="star" 
+              size={24} 
+              color="#FF9800" 
+            />
+          </View>
+          <View style={styles.titleText}>
+            <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+            {subtitle && (
+              <Text style={[styles.subtitle, { color: colors.tabIconDefault }]}>{subtitle}</Text>
+            )}
+          </View>
         </View>
         {onViewAllPress && (
           <TouchableOpacity onPress={handleViewAllPress} style={styles.viewAllButton}>
-            <Text style={[styles.viewAllText, { color: colors.primary }]}>Voir tout</Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+            <Text style={[styles.viewAllText, { color: '#FF9800' }]}>Voir tout</Text>
+            <Ionicons name="chevron-forward" size={16} color="#FF9800" />
           </TouchableOpacity>
         )}
       </View>
-
-      <View style={styles.productsContainer}>
-        {recommendations.map((product) => (
-          <View key={product.id} style={styles.productWrapper}>
-            <ProductCard
-              title={product.title}
-              brand={product.brand}
-              size={product.size}
-              condition={product.condition}
-              price={product.price.toString()}
-              priceWithFees={product.priceWithFees?.toString()}
-              image={product.images && product.images.length > 0 ? 
-                ProductService.getImageUrl(product.images[0].id) : null}
-              likes={product.favoriteCount || 0}
-              isPro={false}
-              isFavorite={false}
-              status={product.status}
-              productId={product.id}
-              onPress={() => handleProductPress(product.id)}
-              onFavoritePress={() => handleFavoritePress(product.id)}
-            />
-            {showBoostedBadge && boostedProducts.includes(product.id) && (
-              <View style={[styles.boostedBadge, { backgroundColor: colors.primary }]}>
-                <Ionicons name="trending-up" size={12} color="#fff" />
-                <Text style={styles.boostedText}>Boosté</Text>
-              </View>
-            )}
-          </View>
-        ))}
-      </View>
+      
+      <FlatList
+        data={displayProducts}
+        keyExtractor={item => item.id.toString()}
+        renderItem={renderProduct}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.list}
+      />
     </View>
   );
 }
@@ -183,9 +203,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingHorizontal: 16,
   },
-  titleContainer: {
-    flex: 1,
-  },
+
   title: {
     fontSize: 18,
     fontWeight: 'bold',
@@ -218,16 +236,27 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     textAlign: 'center',
   },
-  productsContainer: {
+  titleContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 8,
-  },
-  productWrapper: {
-    position: 'relative',
+    alignItems: 'center',
     flex: 1,
-    minWidth: '48%',
-    maxWidth: '48%',
+  },
+  specialIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  titleText: {
+    flex: 1,
+  },
+  list: {
+    paddingLeft: 16,
+  },
+  productContainer: {
+    marginRight: 12,
   },
   boostedBadge: {
     position: 'absolute',
