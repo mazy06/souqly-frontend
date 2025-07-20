@@ -23,6 +23,8 @@ export interface Product {
   locationName?: string;
   city?: string;
   country?: string;
+  isBoosted?: boolean;
+  boostLevel?: number;
   category?: {
     id: number;
     label: string;

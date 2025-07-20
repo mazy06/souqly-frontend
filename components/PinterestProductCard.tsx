@@ -20,16 +20,16 @@ type Props = {
   isFavorite?: boolean;
   onFavoritePress?: () => void;
   status?: string;
-  productId?: number; // Ajout de l'ID du produit pour le tracking
-  isBoosted?: boolean; // Indique si le produit est boosté
-  boostLevel?: number; // Niveau de boost (1-5)
+  productId?: number;
+  isBoosted?: boolean;
+  boostLevel?: number;
 };
 
 // Cache global pour les images déjà chargées
 const imageCache = new Map<string, string | null>();
 const loadingCache = new Set<string>();
 
-export default function ProductCard({ 
+export default function PinterestProductCard({ 
   title, 
   brand, 
   size, 
@@ -65,37 +65,31 @@ export default function ProductCard({
 
   // Utiliser le cache pour éviter de recharger les mêmes images
   const cachedImage = useMemo(() => {
-    if (!image) return null;
-    
-    // Vérifier si l'image est en cours de chargement
-    if (loadingCache.has(image)) {
-      setIsImageLoading(true);
+    if (!image) {
+      console.log(`[DEBUG] PinterestProductCard - Pas d'image pour: ${title}`);
       return null;
     }
     
-    if (imageCache.has(image)) {
-      const cached = imageCache.get(image);
-      setIsImageLoading(false);
-      return cached;
-    }
+    console.log(`[DEBUG] PinterestProductCard - Image reçue: ${image} pour: ${title}`);
     
-    // Marquer comme en cours de chargement
-    loadingCache.add(image);
+    // Forcer le chargement direct sans cache pour le moment
     setIsImageLoading(true);
-    
-    // Ajouter au cache
-    imageCache.set(image, image);
     return image;
-  }, [image]);
+  }, [image, title]);
+
+  // Debug: Log des valeurs en mode développement
+  useEffect(() => {
+    if (__DEV__) {
+      console.log(`[DEBUG] Product ${title}: isBoosted=${isBoosted}, boostLevel=${boostLevel}`);
+    }
+  }, [title, isBoosted, boostLevel]);
 
   // Fonction pour tracker le clic sur le produit
   const handleProductPress = () => {
-    // Tracker le clic sur le produit
     if (productId && user?.id) {
       trackingService.trackInteraction('CLICK', productId, parseInt(user.id));
     }
     
-    // Appeler la fonction onPress originale
     if (onPress) {
       onPress();
     }
@@ -105,7 +99,6 @@ export default function ProductCard({
   const handleFavoritePress = (e: any) => {
     e.stopPropagation();
     
-    // Tracker l'action de favori
     if (productId && user?.id) {
       if (isFavorite) {
         trackingService.trackInteraction('UNFAVORITE', productId, parseInt(user.id));
@@ -114,7 +107,6 @@ export default function ProductCard({
       }
     }
     
-    // Appeler la fonction onFavoritePress originale
     if (onFavoritePress) {
       onFavoritePress();
     }
@@ -123,52 +115,40 @@ export default function ProductCard({
   return (
     <TouchableOpacity style={[styles.card, { backgroundColor: colors.card }]} onPress={handleProductPress} activeOpacity={0.85}>
       <View style={[styles.imageContainer, { backgroundColor: colors.border }]}>
-        {cachedImage ? (
+        {image ? (
           <AdaptiveImage 
-            source={{ uri: cachedImage }} 
+            source={{ uri: image }} 
             style={styles.image} 
             alt={title}
+            onLoadStart={() => {
+              console.log(`[DEBUG] PinterestProductCard - Début du chargement: ${image} pour: ${title}`);
+            }}
             onLoadEnd={() => {
+              console.log(`[DEBUG] PinterestProductCard - Fin du chargement: ${image} pour: ${title}`);
               setIsImageLoading(false);
-              loadingCache.delete(cachedImage);
             }}
             onError={(error) => {
-              console.log('[DEBUG] Erreur chargement image:', cachedImage, error);
-              // Marquer comme échoué dans le cache
-              imageCache.set(cachedImage, null);
-              loadingCache.delete(cachedImage);
+              console.log(`[DEBUG] PinterestProductCard - Erreur chargement image: ${image} pour: ${title}`, error);
               setIsImageLoading(false);
             }}
           />
-        ) : isImageLoading ? (
-          <View style={[styles.image, { backgroundColor: colors.border, justifyContent: 'center', alignItems: 'center' }]}>
-            <View style={styles.imagePlaceholder}>
-              <Ionicons name="image-outline" size={32} color={colors.tabIconDefault} />
-              <Text style={[styles.placeholderText, { color: colors.tabIconDefault }]}>Image</Text>
-            </View>
-          </View>
         ) : (
           <View style={[styles.image, { backgroundColor: colors.border, justifyContent: 'center', alignItems: 'center' }]}>
             <View style={styles.imagePlaceholder}>
-              <Ionicons name="image-outline" size={32} color={colors.tabIconDefault} />
+              <Ionicons name="image-outline" size={24} color={colors.tabIconDefault} />
               <Text style={[styles.placeholderText, { color: colors.tabIconDefault }]}>Image</Text>
             </View>
-          </View>
-        )}
-        
-        {/* Badge Pro */}
-        {isPro && (
-          <View style={[styles.proBadge, { backgroundColor: colors.primary }]}>
-            <Text style={styles.proText}>Pro</Text>
           </View>
         )}
         
         {/* Badge Boosté */}
         {isBoosted && (
           <View style={[styles.boostedBadge, { backgroundColor: '#FF6B35' }]}>
-            <Ionicons name="flame" size={14} color="#fff" />
+            <Ionicons name="flame" size={12} color="#fff" />
           </View>
         )}
+        
+        {/* Debug: Log des valeurs */}
         
         {/* Badge Vendu */}
         {status === 'sold' && (
@@ -185,7 +165,7 @@ export default function ProductCard({
         >
           <Ionicons 
             name={isFavorite ? 'heart' : 'heart-outline'} 
-            size={16} 
+            size={12} 
             color={isFavorite ? colors.danger : '#fff'} 
           />
           <Text style={styles.likesText}>{likes}</Text>
@@ -203,18 +183,6 @@ export default function ProductCard({
         <Text style={[styles.details, { color: colors.tabIconDefault }]} numberOfLines={1}>
           {size ? size + ' · ' : ''}{condition || 'État non précisé'}
         </Text>
-        
-        {/* Prix */}
-        <View style={styles.priceContainer}>
-          <Text style={[styles.price, { color: colors.primary }]}>
-            {price || 'Prix'} €
-          </Text>
-          {priceWithFees && (
-            <Text style={[styles.priceWithFees, { color: colors.textSecondary }]}>
-              {priceWithFees} €
-            </Text>
-          )}
-        </View>
       </View>
     </TouchableOpacity>
   );
@@ -222,9 +190,8 @@ export default function ProductCard({
 
 const styles = StyleSheet.create({
   card: {
-    width: 160,
-    height: 280, // Hauteur fixe pour éviter les variations
-    margin: 8,
+    width: '33.33%', // Force 3 colonnes
+    margin: 2,
     overflow: 'hidden',
     borderRadius: 8,
     ...(Platform.OS === 'web' ? {
@@ -236,37 +203,19 @@ const styles = StyleSheet.create({
   imageContainer: {
     position: 'relative',
     width: '100%',
-    aspectRatio: 4/5,
+    aspectRatio: 1,
   },
   image: {
     width: '100%',
     height: '100%',
   },
-  proBadge: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  proText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 10,
-  },
   boostedBadge: {
     position: 'absolute',
-    top: 8,
-    left: 8,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    top: 4,
+    left: 4,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -277,11 +226,11 @@ const styles = StyleSheet.create({
   },
   soldBadge: {
     position: 'absolute',
-    top: 8,
-    left: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    top: 4,
+    left: 4,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
@@ -291,17 +240,17 @@ const styles = StyleSheet.create({
   soldText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 10,
+    fontSize: 7,
   },
   likesBadgeTopRight: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    borderRadius: 16,
+    top: 4,
+    right: 4,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
     zIndex: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -312,57 +261,43 @@ const styles = StyleSheet.create({
   likesText: {
     color: '#fff',
     fontWeight: 'bold',
-    marginLeft: 4,
-    fontSize: 13,
+    marginLeft: 3,
+    fontSize: 10,
   },
   brand: {
     fontWeight: '600',
-    fontSize: 12,
-    marginBottom: 4,
+    fontSize: 9,
+    marginBottom: 2,
     opacity: 0.8,
-    minHeight: 16, // Hauteur minimale fixe
-    lineHeight: 16, // Alignement du texte
+    minHeight: 10,
+    lineHeight: 10,
   },
   title: {
     fontWeight: '700',
-    fontSize: 14,
-    marginBottom: 4,
-    minHeight: 18, // Hauteur minimale fixe pour 1 ligne
-    lineHeight: 18, // Alignement du texte
+    fontSize: 10,
+    marginBottom: 2,
+    minHeight: 12,
+    lineHeight: 12,
   },
   details: {
-    fontSize: 12,
-    marginBottom: 8,
-    minHeight: 16, // Hauteur minimale fixe
-    lineHeight: 16, // Alignement du texte
+    fontSize: 8,
+    marginBottom: 3,
+    minHeight: 8,
+    lineHeight: 8,
     opacity: 0.7,
   },
   cardContent: {
     flex: 1,
-    padding: 12,
+    padding: 4,
     justifyContent: 'space-between',
-  },
-  priceContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    marginTop: 4,
-  },
-  price: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginRight: 4,
-  },
-  priceWithFees: {
-    fontSize: 12,
-    textDecorationLine: 'line-through',
   },
   imagePlaceholder: {
     alignItems: 'center',
     justifyContent: 'center',
   },
   placeholderText: {
-    fontSize: 12,
-    marginTop: 4,
+    fontSize: 10,
+    marginTop: 2,
     opacity: 0.7,
   },
 }); 

@@ -61,7 +61,7 @@ export default function BoostedProductCard({
       case 'urgent':
         return 'flash';
       default:
-        return 'trending-up';
+        return 'flame';
     }
   };
 
@@ -90,13 +90,9 @@ export default function BoostedProductCard({
       <View style={[styles.boostBadge, { backgroundColor: boostBadgeStyle.backgroundColor }]}>
         <Ionicons 
           name={getBoostIcon() as any} 
-          size={12} 
+          size={14} 
           color={boostBadgeStyle.color} 
         />
-        <Text style={[styles.boostText, { color: boostBadgeStyle.color }]}>
-          {boostType === 'premium' ? 'Premium' : 
-           boostType === 'urgent' ? 'Urgent' : 'Boosté'}
-        </Text>
       </View>
       
       {/* Indicateur de niveau de boost */}
@@ -120,17 +116,17 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     left: 8,
-    flexDirection: 'row',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
     zIndex: 10,
-  },
-  boostText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    marginLeft: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   boostLevel: {
     position: 'absolute',

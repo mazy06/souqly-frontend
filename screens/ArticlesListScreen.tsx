@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, ScrollView, StyleSheet, FlatList, Text, RefreshControl, ActivityIndicator, TouchableOpacity, Alert, ActionSheetIOS, Platform } from 'react-native';
 import ProductCard from '../components/ProductCard';
+import PinterestProductCard from '../components/PinterestProductCard';
+import EcommerceProductCard from '../components/EcommerceProductCard';
 import PrimaryButton from '../components/PrimaryButton';
 import { useAuth } from '../contexts/AuthContext';
 import VisitorBadge from '../components/VisitorBadge';
-import Skeleton from '../components/Skeleton';
 import ProductService, { Product } from '../services/ProductService';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
@@ -47,7 +48,7 @@ export default function ArticlesListScreen() {
   const selectedCategory = routeParams?.category;
   const categoryName = routeParams?.categoryName;
   
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -56,73 +57,120 @@ export default function ArticlesListScreen() {
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
-  const [imageUrls, setImageUrls] = useState<{[key: number]: string}>({});
+  const [imageUrls, setImageUrls] = useState<{[key: number]: string | null}>({});
   const [favoriteCounts, setFavoriteCounts] = useState<{ [productId: number]: number }>({});
   const [displayStyle, setDisplayStyle] = useState<'pinterest' | 'ecommerce'>('pinterest');
 
   const loadProducts = async (page: number = 0, append: boolean = false) => {
+    console.log(`[DEBUG] loadProducts appelée - page: ${page}, append: ${append}, loading: ${loading}`);
+    
+    // Éviter les appels multiples pendant le chargement
+    if (loading) {
+      console.log('[DEBUG] loadProducts - Déjà en cours de chargement, sortie');
+      return;
+    }
+    
     try {
-      if (append) {
-        setLoadingMore(true);
-      } else {
+      if (!append) {
+        console.log('[DEBUG] loadProducts - Début du chargement');
         setLoading(true);
+        setError(null);
       }
       
-      const response = await ProductService.getProductsCacheable({
+      console.log('[DEBUG] loadProducts - Appel de ProductService.getProducts');
+      const response = await ProductService.getProducts({
         page,
-        pageSize: 10
+        pageSize: 20,
+        ...(selectedCategory && { categoryKey: selectedCategory.toLowerCase() }),
+        ...(search && { search }),
+        ...(selectedFilter && selectedFilter !== 'Voir tout' && { filter: selectedFilter })
       });
-
-      let newProducts = response.content || [];
       
-      // Filtrer par catégorie si une catégorie est sélectionnée
-      if (selectedCategory) {
-        newProducts = newProducts.filter(product => 
-          product.category?.categoryKey?.toLowerCase() === selectedCategory.toLowerCase() ||
-          product.category?.label?.toLowerCase() === selectedCategory.toLowerCase()
-        );
+      console.log('[DEBUG] loadProducts - Réponse reçue:', response);
+      
+      if (response && response.content) {
+        const newProducts = response.content;
+        
+        // Debug: Log des produits boostés
+        const boostedProducts = newProducts.filter(p => p.isBoosted);
+        console.log(`[DEBUG] Loaded ${newProducts.length} products, ${boostedProducts.length} boosted`);
+        boostedProducts.forEach(product => {
+          console.log(`[DEBUG] Boosted product: ${product.title} (ID: ${product.id}, isBoosted: ${product.isBoosted}, boostLevel: ${product.boostLevel})`);
+        });
+        
+        console.log('[DEBUG] loadProducts - Mise à jour des produits');
+        if (append) {
+          setProducts(prev => [...prev, ...newProducts]);
+        } else {
+          setProducts(newProducts);
+        }
+        
+        setHasMore(newProducts.length === 20);
+        console.log('[DEBUG] loadProducts - Produits mis à jour avec succès');
+        
+        // Charger les URLs d'images
+        loadImageUrls(newProducts);
+      } else {
+        console.log('[DEBUG] loadProducts - Réponse invalide:', response);
       }
+    } catch (error) {
+      console.error('[DEBUG] loadProducts - Erreur:', error);
+      setError('Erreur lors du chargement des produits');
+    } finally {
+      console.log('[DEBUG] loadProducts - Fin du chargement, setLoading(false)');
+      setLoading(false);
+    }
+  };
+
+  const loadImageUrls = async (products: Product[]) => {
+    const urls: {[key: number]: string | null} = {};
+    console.log('[DEBUG] loadImageUrls - Nombre de produits:', products.length);
+    
+    // Traitement par lots pour améliorer les performances
+    const batchSize = 10;
+    for (let i = 0; i < products.length; i += batchSize) {
+      const batch = products.slice(i, i + batchSize);
       
-      // Charger les URLs des images pour les nouveaux produits
-      const urls: {[key: number]: string} = {};
-      for (const product of newProducts) {
+      // Traiter le lot en parallèle
+      const batchPromises = batch.map(async (product) => {
         try {
-          // On prend la première image si dispo
+          // Vérifier d'abord si l'image est déjà dans le produit
           if (product.images && product.images.length > 0) {
-            urls[product.id] = ProductService.getImageUrl(product.images[0].id);
+            const imageId = product.images[0].id;
+            const imageUrl = ProductService.getImageUrl(imageId);
+            return { productId: product.id, imageUrl };
+          }
+          
+          // Si pas d'image dans le produit, essayer de la récupérer depuis l'API
+          try {
+            const productImages = await ProductService.getProductImages(product.id);
+            
+            if (productImages && productImages.length > 0) {
+              const imageId = productImages[0].id;
+              const imageUrl = ProductService.getImageUrl(imageId);
+              return { productId: product.id, imageUrl };
+            } else {
+              return { productId: product.id, imageUrl: null };
+            }
+          } catch (apiError) {
+            return { productId: product.id, imageUrl: null };
           }
         } catch (error) {
-          // Erreur silencieuse pour le chargement d'image
+          return { productId: product.id, imageUrl: null };
         }
-      }
-
-      // Récupérer les counts de favoris pour cette page
-      const ids = newProducts.map(p => p.id);
-      let counts: { [productId: number]: number } = {};
-      if (ids.length > 0) {
-        try {
-          counts = await ProductService.getFavoriteCounts(ids);
-        } catch (e) {
-          counts = {};
-        }
-      }
-      if (append) {
-        setProducts(prev => [...prev, ...newProducts]);
-        setImageUrls(prev => ({ ...prev, ...urls }));
-        setFavoriteCounts(prev => ({ ...prev, ...counts }));
-      } else {
-        setProducts(newProducts);
-        setImageUrls(urls);
-        setFavoriteCounts(counts);
-      }
-      setCurrentPage(page);
-      setHasMore((response.currentPage || 0) < (response.totalPages || 1) - 1);
-      setError(null);
-    } catch (err) {
-      setError('Impossible de charger les produits. Veuillez réessayer plus tard.');
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
+      });
+      
+      // Attendre que tous les produits du lot soient traités
+      const batchResults = await Promise.all(batchPromises);
+      
+      // Mettre à jour l'état progressivement pour améliorer l'UX
+      const batchUrls: {[key: number]: string | null} = {};
+      batchResults.forEach(({ productId, imageUrl }) => {
+        batchUrls[productId] = imageUrl;
+      });
+      
+      // Mettre à jour l'état pour ce lot
+      setImageUrls(prev => ({ ...prev, ...batchUrls }));
     }
   };
 
@@ -142,14 +190,21 @@ export default function ArticlesListScreen() {
   };
 
   useEffect(() => {
+    // Chargement initial seulement
+    console.log('[ArticlesListScreen] useEffect - Chargement initial');
     loadProducts(0, false);
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      loadProducts(0, false);
+      // Recharger seulement si l'écran devient actif et qu'il n'y a pas de données
+      console.log(`[ArticlesListScreen] useFocusEffect - products.length: ${products.length}`);
+      if (products.length === 0 && !loading) {
+        console.log('[ArticlesListScreen] useFocusEffect - Rechargement des données');
+        loadProducts(0, false);
+      }
       refreshFavorites();
-    }, [])
+    }, [products.length, loading])
   );
 
   const handleProductPress = (productId: number) => {
@@ -287,92 +342,53 @@ export default function ArticlesListScreen() {
     }
   };
 
-  const renderProductPinterest = ({ item }: { item: Product }) => (
-    <View style={styles.pinterestCard}>
-      <TouchableOpacity 
-        style={[styles.pinterestCardContent, { backgroundColor: colors.card }]}
+  const renderProductPinterest = ({ item }: { item: Product }) => {
+    // Debug: Log des informations d'image
+    const imageUrl = imageUrls[item.id] || (item.images && item.images.length > 0 ? getImageUrl(item.images[0].id) : null);
+    console.log(`[DEBUG] Product ${item.id} (${item.title}):`);
+    console.log(`  - imageUrls[${item.id}]: ${imageUrls[item.id]}`);
+    console.log(`  - item.images:`, item.images);
+    console.log(`  - Final imageUrl: ${imageUrl}`);
+    
+    return (
+      <PinterestProductCard
+        title={item.title}
+        brand={item.brand}
+        size={item.size}
+        condition={item.condition}
+        price={`${item.price}`}
+        priceWithFees={item.priceWithFees ? `${item.priceWithFees}` : undefined}
+        image={imageUrl}
+        likes={favoriteCounts[item.id] || 0}
+        isFavorite={isFavorite(item.id)}
         onPress={() => handleProductPress(item.id)}
-        activeOpacity={0.85}
-      >
-        <View style={styles.pinterestImageContainer}>
-          <AdaptiveImage
-            source={{ uri: imageUrls[item.id] || (item.images && item.images.length > 0 ? getImageUrl(item.images[0].id) : getProductPlaceholder()) }}
-            style={styles.pinterestImage}
-          />
-          <TouchableOpacity 
-            style={styles.pinterestFavoriteButton}
-            onPress={() => handleFavoritePress(item.id)}
-          >
-            <Ionicons 
-              name={isFavorite(item.id) ? "heart" : "heart-outline"} 
-              size={14} 
-              color={isFavorite(item.id) ? "#ff4757" : colors.textSecondary} 
-            />
-          </TouchableOpacity>
-          {favoriteCounts[item.id] > 0 && (
-            <View style={styles.pinterestLikesBadge}>
-              <Text style={styles.pinterestLikesText}>{favoriteCounts[item.id]}</Text>
-            </View>
-          )}
-        </View>
-        <View style={styles.pinterestInfo}>
-          <Text style={[styles.pinterestBrand, { color: colors.textSecondary }]} numberOfLines={1}>
-            {item.brand || 'Marque'}
-          </Text>
-          <Text style={[styles.pinterestTitle, { color: colors.text }]} numberOfLines={1}>
-            {item.title || 'Titre du produit'}
-          </Text>
-          <Text style={[styles.pinterestCondition, { color: colors.textSecondary }]} numberOfLines={1}>
-            {item.condition || 'État non précisé'}
-          </Text>
-        </View>
-      </TouchableOpacity>
-    </View>
-  );
+        onFavoritePress={() => handleFavoritePress(item.id)}
+        status={item.status}
+        productId={item.id}
+        isBoosted={item.isBoosted}
+        boostLevel={item.boostLevel}
+      />
+    );
+  };
 
   const renderProductEcommerce = ({ item }: { item: Product }) => (
-    <View style={styles.ecommerceCard}>
-      <TouchableOpacity 
-        style={[styles.ecommerceCardContent, { backgroundColor: colors.card }]}
-        onPress={() => handleProductPress(item.id)}
-      >
-        <View style={styles.ecommerceImageContainer}>
-          <AdaptiveImage
-            source={{ uri: imageUrls[item.id] || (item.images && item.images.length > 0 ? getImageUrl(item.images[0].id) : getProductPlaceholder()) }}
-            style={styles.ecommerceImage}
-          />
-          <TouchableOpacity 
-            style={styles.ecommerceFavoriteButton}
-            onPress={() => handleFavoritePress(item.id)}
-          >
-            <Ionicons 
-              name={isFavorite(item.id) ? "heart" : "heart-outline"} 
-              size={20} 
-              color={isFavorite(item.id) ? "#ff4757" : colors.textSecondary} 
-            />
-          </TouchableOpacity>
-          {favoriteCounts[item.id] > 0 && (
-            <View style={styles.ecommerceLikesBadge}>
-              <Text style={styles.ecommerceLikesText}>{favoriteCounts[item.id]}</Text>
-            </View>
-          )}
-        </View>
-        <View style={styles.ecommerceInfo}>
-          <Text style={[styles.ecommerceBrand, { color: colors.textSecondary }]} numberOfLines={1}>
-            {item.brand || 'Marque'}
-          </Text>
-          <Text style={[styles.ecommerceTitle, { color: colors.text }]} numberOfLines={2}>
-            {item.title || 'Titre du produit'}
-          </Text>
-          <Text style={[styles.ecommerceCondition, { color: colors.textSecondary }]} numberOfLines={1}>
-            {item.condition || 'État non précisé'}
-          </Text>
-          <Text style={[styles.ecommercePrice, { color: colors.primary }]} numberOfLines={1}>
-            {item.price ? `${item.price}€` : 'Prix non précisé'}
-          </Text>
-        </View>
-      </TouchableOpacity>
-    </View>
+    <EcommerceProductCard
+      title={item.title}
+      brand={item.brand}
+      size={item.size}
+      condition={item.condition}
+      price={`${item.price}`}
+      priceWithFees={item.priceWithFees ? `${item.priceWithFees}` : undefined}
+      image={imageUrls[item.id] || (item.images && item.images.length > 0 ? getImageUrl(item.images[0].id) : null)}
+      likes={favoriteCounts[item.id] || 0}
+      isFavorite={isFavorite(item.id)}
+      onPress={() => handleProductPress(item.id)}
+      onFavoritePress={() => handleFavoritePress(item.id)}
+      status={item.status}
+      productId={item.id}
+      isBoosted={item.isBoosted}
+      boostLevel={item.boostLevel}
+    />
   );
 
   const renderProduct = displayStyle === 'pinterest' ? renderProductPinterest : renderProductEcommerce;
@@ -409,25 +425,61 @@ export default function ArticlesListScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.skeletonContainer}>
-          <View style={styles.skeletonGrid}>
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <View key={i} style={styles.skeletonCard}>
-                <View style={styles.skeletonImageContainer}>
-                  <Skeleton containerStyle={{ width: '100%', height: 160, borderRadius: 16 }} />
-                </View>
-                <View style={styles.skeletonContent}>
-                  <Skeleton containerStyle={{ width: '70%', height: 14 }} />
-                  <Skeleton containerStyle={{ width: '90%', height: 16 }} />
-                  <Skeleton containerStyle={{ width: '60%', height: 12 }} />
-                  <Skeleton containerStyle={{ width: '50%', height: 14 }} />
-                </View>
-              </View>
-            ))}
-          </View>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top','left','right']}>
+        {/* Header avec retour et switch */}
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+          
+          <Text style={[styles.headerTitle, { color: colors.text }]}>
+            {categoryName || 'Tous les articles'}
+          </Text>
+          
+          <TouchableOpacity 
+            style={styles.switchButton}
+            onPress={() => setDisplayStyle(displayStyle === 'pinterest' ? 'ecommerce' : 'pinterest')}
+          >
+            <Ionicons 
+              name={displayStyle === 'pinterest' ? "grid-outline" : "list-outline"} 
+              size={20} 
+              color={colors.primary} 
+            />
+          </TouchableOpacity>
         </View>
-      </View>
+        
+        <View style={styles.headerSpacer} />
+        <VisitorBadge onSignup={() => logout()} />
+        <SearchBar 
+          value={search} 
+          onChangeText={setSearch}
+        />
+        <View style={styles.filtersContainer}>
+          <FilterChips 
+            filters={[
+              { key: 'Voir tout', label: 'Voir tout' },
+              { key: 'Nouveaux', label: 'Nouveaux' },
+              { key: 'Populaires', label: 'Populaires' },
+              { key: 'Prix bas', label: 'Prix bas' },
+              { key: 'Prix haut', label: 'Prix haut' }
+            ]}
+            selectedFilter={selectedFilter}
+            onFilterSelect={setSelectedFilter}
+            showTitle={false}
+          />
+        </View>
+        
+        {/* Spinner centralisé */}
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.text }]}>
+            Chargement...
+          </Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -446,7 +498,10 @@ export default function ArticlesListScreen() {
         data={products}
         keyExtractor={item => item.id.toString()}
         numColumns={displayStyle === 'pinterest' ? 3 : 1}
-        contentContainerStyle={styles.unifiedContent}
+        contentContainerStyle={[
+          styles.unifiedContent,
+          displayStyle === 'pinterest' && styles.pinterestGrid
+        ]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -555,25 +610,8 @@ const styles = StyleSheet.create({
   unifiedContent: {
     padding: 16,
   },
-  skeletonContainer: {
-    flex: 1,
-    padding: 8,
-  },
-  skeletonGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  skeletonCard: {
-    width: '50%',
-    padding: 8,
-  },
-  skeletonImageContainer: {
-    width: '100%',
-    height: 160,
-    borderRadius: 16,
-    marginBottom: 8,
-  },
-  skeletonContent: {
+  // Style spécifique pour la grille Pinterest
+  pinterestGrid: {
     paddingHorizontal: 8,
   },
   errorText: {
@@ -588,143 +626,6 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     fontSize: 14,
-    fontWeight: 'bold',
-  },
-  // Styles Pinterest
-  pinterestCard: {
-    width: '33.33%',
-    padding: 4,
-  },
-  pinterestCardContent: {
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  pinterestImageContainer: {
-    position: 'relative',
-    width: '100%',
-    height: 100,
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  pinterestImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 8,
-  },
-  pinterestFavoriteButton: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  pinterestLikesBadge: {
-    position: 'absolute',
-    bottom: 4,
-    right: 4,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    borderRadius: 8,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-  },
-  pinterestLikesText: {
-    color: 'white',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  pinterestInfo: {
-    padding: 6,
-  },
-  pinterestBrand: {
-    fontSize: 12,
-    marginBottom: 4,
-  },
-  pinterestTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 2,
-    lineHeight: 16,
-  },
-  pinterestCondition: {
-    fontSize: 10,
-    marginTop: 2,
-  },
-  // Styles E-commerce
-  ecommerceCard: {
-    marginBottom: 16,
-  },
-  ecommerceCardContent: {
-    flexDirection: 'row',
-    borderRadius: 12,
-    padding: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  ecommerceImageContainer: {
-    position: 'relative',
-    width: 100,
-    height: 100,
-    borderRadius: 8,
-    overflow: 'hidden',
-    marginRight: 12,
-  },
-  ecommerceImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 8,
-  },
-  ecommerceFavoriteButton: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 15,
-    width: 30,
-    height: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  ecommerceLikesBadge: {
-    position: 'absolute',
-    bottom: 8,
-    right: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    borderRadius: 10,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  ecommerceLikesText: {
-    color: 'white',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  ecommerceInfo: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  ecommerceBrand: {
-    fontSize: 12,
-    marginBottom: 4,
-  },
-  ecommerceTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-    lineHeight: 20,
-  },
-  ecommerceCondition: {
-    fontSize: 12,
-    marginBottom: 4,
-  },
-  ecommercePrice: {
-    fontSize: 18,
     fontWeight: 'bold',
   },
   // Header
@@ -759,5 +660,15 @@ const styles = StyleSheet.create({
   // Espace après le header
   headerSpacer: {
     height: 12,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
   },
 }); 

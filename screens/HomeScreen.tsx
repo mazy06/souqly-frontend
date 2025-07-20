@@ -186,10 +186,8 @@ export default function HomeScreen() {
         loadFavoriteCounts(allProducts)
       ]);
       
-      // Mettre à jour les données de recommandation en arrière-plan
-      if (user?.id) {
-        recommendationService.updateRecommendationData(parseInt(user.id));
-      }
+      // Les recommandations sont gérées par le composant RecommendationSection
+      // Pas besoin de mise à jour manuelle ici
       
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);

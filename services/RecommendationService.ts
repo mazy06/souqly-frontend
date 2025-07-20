@@ -1,10 +1,20 @@
 import ApiService from './ApiService';
 import { Product } from './ProductService';
 
-export interface RecommendationResponse {
+export interface RecommendationMetrics {
+  totalRecommendations: number;
+  boostedCount: number;
+  boostedPercentage: number;
+  avgPrice: number;
+  avgFavorites: number;
+  uniqueBrands: number;
+  diversity: number;
+}
+
+export interface BoostedRecommendationResponse {
   products: Product[];
-  type: 'content' | 'collaborative' | 'hybrid';
-  timestamp: string;
+  boostedProducts: number[];
+  metrics: RecommendationMetrics;
 }
 
 class RecommendationService {
@@ -12,7 +22,7 @@ class RecommendationService {
 
   private constructor() {}
 
-  public static getInstance(): RecommendationService {
+  static getInstance(): RecommendationService {
     if (!RecommendationService.instance) {
       RecommendationService.instance = new RecommendationService();
     }
@@ -72,12 +82,115 @@ class RecommendationService {
   }
 
   /**
+   * Obtient des recommandations avec boosts et métriques
+   */
+  async getBoostedRecommendations(userId: number, limit: number = 10): Promise<BoostedRecommendationResponse> {
+    try {
+      const response = await ApiService.get<{
+        recommendations: Product[];
+        metrics: RecommendationMetrics;
+      }>(`/recommendations/for-me?limit=${limit}&includeMetrics=true`);
+
+      if (!response) {
+        return {
+          products: [],
+          boostedProducts: [],
+          metrics: {
+            totalRecommendations: 0,
+            boostedCount: 0,
+            boostedPercentage: 0,
+            avgPrice: 0,
+            avgFavorites: 0,
+            uniqueBrands: 0,
+            diversity: 0
+          }
+        };
+      }
+
+      const products = response.recommendations || [];
+      const boostedProducts = products
+        .filter(product => product.isBoosted)
+        .map(product => product.id);
+
+      return {
+        products,
+        boostedProducts,
+        metrics: response.metrics || {
+          totalRecommendations: products.length,
+          boostedCount: boostedProducts.length,
+          boostedPercentage: products.length > 0 ? (boostedProducts.length / products.length) * 100 : 0,
+          avgPrice: products.reduce((sum, p) => sum + (p.price || 0), 0) / products.length || 0,
+          avgFavorites: products.reduce((sum, p) => sum + (p.favoriteCount || 0), 0) / products.length || 0,
+          uniqueBrands: new Set(products.map(p => p.brand).filter(Boolean)).size,
+          diversity: products.length > 0 ? new Set(products.map(p => p.brand).filter(Boolean)).size / products.length : 0
+        }
+      };
+    } catch (error) {
+      console.error('Erreur lors de la récupération des recommandations boostées:', error);
+      return {
+        products: [],
+        boostedProducts: [],
+        metrics: {
+          totalRecommendations: 0,
+          boostedCount: 0,
+          boostedPercentage: 0,
+          avgPrice: 0,
+          avgFavorites: 0,
+          uniqueBrands: 0,
+          diversity: 0
+        }
+      };
+    }
+  }
+
+  /**
+   * Obtient des recommandations détaillées avec métriques
+   */
+  async getDetailedRecommendations(userId: number, limit: number = 10, type: 'content' | 'collaborative' | 'hybrid' = 'hybrid'): Promise<{
+    recommendations: Product[];
+    metrics: RecommendationMetrics;
+  }> {
+    try {
+      const response = await ApiService.get<{
+        recommendations: Product[];
+        metrics: RecommendationMetrics;
+      }>(`/recommendations/detailed/${userId}?limit=${limit}&type=${type}`);
+
+      return {
+        recommendations: response?.recommendations || [],
+        metrics: response?.metrics || {
+          totalRecommendations: 0,
+          boostedCount: 0,
+          boostedPercentage: 0,
+          avgPrice: 0,
+          avgFavorites: 0,
+          uniqueBrands: 0,
+          diversity: 0
+        }
+      };
+    } catch (error) {
+      console.error('Erreur lors de la récupération des recommandations détaillées:', error);
+      return {
+        recommendations: [],
+        metrics: {
+          totalRecommendations: 0,
+          boostedCount: 0,
+          boostedPercentage: 0,
+          avgPrice: 0,
+          avgFavorites: 0,
+          uniqueBrands: 0,
+          diversity: 0
+        }
+      };
+    }
+  }
+
+  /**
    * Calcule le profil utilisateur
    */
   async calculateUserProfile(userId: number): Promise<boolean> {
     try {
       await ApiService.post(`/recommendations/calculate-profile/${userId}`, {});
-      console.log('Profil utilisateur calculé avec succès');
       return true;
     } catch (error) {
       console.error('Erreur lors du calcul du profil utilisateur:', error);
@@ -91,7 +204,6 @@ class RecommendationService {
   async calculateUserSimilarities(userId: number): Promise<boolean> {
     try {
       await ApiService.post(`/recommendations/calculate-similarities/${userId}`, {});
-      console.log('Similarités utilisateur calculées avec succès');
       return true;
     } catch (error) {
       console.error('Erreur lors du calcul des similarités utilisateur:', error);
@@ -131,47 +243,64 @@ class RecommendationService {
   }
 
   /**
-   * Obtient des recommandations avec indicateurs de boost
+   * Obtient des recommandations avec fallback vers les produits populaires
    */
-  async getBoostedRecommendations(userId: number, limit: number = 10): Promise<{
-    products: Product[];
-    boostedProducts: number[];
-  }> {
+  async getRecommendationsWithFallback(userId: number, limit: number = 10): Promise<BoostedRecommendationResponse> {
     try {
-      const products = await this.getSmartRecommendations(userId, limit);
-      
-      // Identifier les produits boostés (pour l'instant, on utilise un critère simple)
-      const boostedProducts = products
-        .filter(product => product.favoriteCount > 10 || product.viewCount > 50)
-        .map(product => product.id);
+      // Essayer d'abord les recommandations boostées
+      const boostedRecs = await this.getBoostedRecommendations(userId, limit);
+      if (boostedRecs.products.length > 0) {
+        return boostedRecs;
+      }
 
-      return {
-        products,
-        boostedProducts
-      };
-    } catch (error) {
-      console.error('Erreur lors de la récupération des recommandations boostées:', error);
+      // Fallback vers les recommandations intelligentes
+      const smartRecs = await this.getSmartRecommendations(userId, limit);
+      if (smartRecs.length > 0) {
+        const boostedProducts = smartRecs.filter(p => p.isBoosted).map(p => p.id);
+        return {
+          products: smartRecs,
+          boostedProducts,
+          metrics: {
+            totalRecommendations: smartRecs.length,
+            boostedCount: boostedProducts.length,
+            boostedPercentage: smartRecs.length > 0 ? (boostedProducts.length / smartRecs.length) * 100 : 0,
+            avgPrice: smartRecs.reduce((sum, p) => sum + (p.price || 0), 0) / smartRecs.length || 0,
+            avgFavorites: smartRecs.reduce((sum, p) => sum + (p.favoriteCount || 0), 0) / smartRecs.length || 0,
+            uniqueBrands: new Set(smartRecs.map(p => p.brand).filter(Boolean)).size,
+            diversity: smartRecs.length > 0 ? new Set(smartRecs.map(p => p.brand).filter(Boolean)).size / smartRecs.length : 0
+          }
+        };
+      }
+
+      // Fallback final : retourner des produits populaires
       return {
         products: [],
-        boostedProducts: []
+        boostedProducts: [],
+        metrics: {
+          totalRecommendations: 0,
+          boostedCount: 0,
+          boostedPercentage: 0,
+          avgPrice: 0,
+          avgFavorites: 0,
+          uniqueBrands: 0,
+          diversity: 0
+        }
       };
-    }
-  }
-
-  /**
-   * Met à jour les profils et similarités en arrière-plan
-   */
-  async updateRecommendationData(userId: number): Promise<void> {
-    try {
-      // Calculer le profil utilisateur
-      await this.calculateUserProfile(userId);
-      
-      // Calculer les similarités
-      await this.calculateUserSimilarities(userId);
-      
-      console.log('Données de recommandation mises à jour avec succès');
     } catch (error) {
-      console.error('Erreur lors de la mise à jour des données de recommandation:', error);
+      console.error('Erreur lors de la récupération des recommandations avec fallback:', error);
+      return {
+        products: [],
+        boostedProducts: [],
+        metrics: {
+          totalRecommendations: 0,
+          boostedCount: 0,
+          boostedPercentage: 0,
+          avgPrice: 0,
+          avgFavorites: 0,
+          uniqueBrands: 0,
+          diversity: 0
+        }
+      };
     }
   }
 }
