@@ -6,8 +6,8 @@ export type Environment = 'development' | 'staging' | 'production';
 // Configuration par environnement
 const ENV_CONFIG = {
   development: {
-    // Utiliser localhost pour tous les environnements de développement
-    apiBaseUrl: 'http://localhost:8080',
+    // Configuration adaptative pour React Native
+    apiBaseUrl: Platform.OS === 'ios' ? 'http://localhost:8080' : 'http://192.168.1.160:8080',
     apiPath: '/api',
   },
   staging: {

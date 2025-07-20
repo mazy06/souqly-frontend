@@ -1,106 +1,93 @@
 import React from 'react';
-import { ScrollView, TouchableOpacity, Text, StyleSheet, View } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
-import { useNavigation } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
 
-interface FilterChipsProps {
-  selected: string;
-  onSelect: (filter: string) => void;
+export interface FilterOption {
+  key: string;
+  label: string;
+  count?: number;
 }
 
-export default function FilterChips({ selected, onSelect }: FilterChipsProps) {
+interface FilterChipsProps {
+  filters: FilterOption[];
+  selectedFilter: string;
+  onFilterSelect: (filterKey: string) => void;
+  title?: string;
+  showTitle?: boolean;
+}
+
+export default function FilterChips({ 
+  filters = [], 
+  selectedFilter, 
+  onFilterSelect, 
+  title = "Filtrer par statut",
+  showTitle = true 
+}: FilterChipsProps) {
   const { colors } = useTheme();
-  const navigation = useNavigation();
-  
-  // Filtres de recherche
-  const searchFilters = [
-    { key: 'recent', label: 'Récents', icon: 'time-outline' },
-    { key: 'popular', label: 'Populaires', icon: 'trending-up-outline' },
-    { key: 'nearby', label: 'À proximité', icon: 'location-outline' },
-    { key: 'new', label: 'Nouveautés', icon: 'sparkles-outline' },
-    { key: 'promo', label: 'Promotions', icon: 'pricetag-outline' },
-    { key: 'verified', label: 'Vérifiés', icon: 'checkmark-circle-outline' },
-    { key: 'urgent', label: 'Urgents', icon: 'flash-outline' },
-  ];
-  
-  const handleFilterPress = (filterKey: string) => {
-    if (filterKey === 'filters') {
-      (navigation as any).navigate('Filters');
-    } else {
-      onSelect(filterKey);
-    }
-  };
-  
+
+  // Vérification de sécurité
+  if (!filters || !Array.isArray(filters)) {
+    return null;
+  }
+
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scroll}>
-      <View style={styles.row}>
-        {/* Bouton de filtres avancés */}
-        <TouchableOpacity
-          style={[
-            styles.filterButton, 
-            { backgroundColor: colors.card },
-            selected === 'filters' && { backgroundColor: colors.primary }
-          ]}
-          onPress={() => handleFilterPress('filters')}
-        >
-          <Ionicons 
-            name="filter-outline" 
-            size={18} 
-            color={selected === 'filters' ? 'white' : colors.primary} 
-          />
-        </TouchableOpacity>
-        
-        {/* Filtres rapides */}
-        {searchFilters.map((filter) => (
+    <View style={styles.container}>
+      {showTitle && (
+        <Text style={[styles.filtersTitle, { color: colors.text }]}>
+          {title}
+        </Text>
+      )}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersScrollView}>
+        {filters.map((filter) => (
           <TouchableOpacity
             key={filter.key}
             style={[
-              styles.chip, 
-              { backgroundColor: colors.card },
-              selected === filter.key && { backgroundColor: colors.primary }
+              styles.filterChip, 
+              { backgroundColor: selectedFilter === filter.key ? colors.primary : colors.card },
+              { borderColor: selectedFilter === filter.key ? colors.primary : colors.border }
             ]}
-            onPress={() => handleFilterPress(filter.key)}
+            onPress={() => onFilterSelect(filter.key)}
           >
             <Text style={[
-              styles.chipText, 
-              { color: colors.text },
-              selected === filter.key && { color: 'white' }
+              styles.filterChipText, 
+              { color: selectedFilter === filter.key ? 'white' : colors.text }
             ]}>
-              {filter.label}
+              {filter.label}{filter.count !== undefined ? ` (${filter.count})` : ''}
             </Text>
           </TouchableOpacity>
         ))}
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { marginVertical: 4, marginBottom: 8 },
-  row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 },
-  filterButton: {
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginRight: 8,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
+  container: {
+    marginBottom: 4,
+    paddingHorizontal: 0,
   },
-  chip: {
-    borderRadius: 20,
+  filtersTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  filtersScrollView: {
+    flexGrow: 0,
+  },
+  filterChip: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginRight: 8,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginRight: 12,
+    backgroundColor: '#f0f0f0',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    minWidth: 80,
+    alignItems: 'center',
   },
-  chipText: {
-    fontWeight: '500',
+  filterChipText: {
     fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 }); 

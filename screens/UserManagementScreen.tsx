@@ -5,7 +5,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  TextInput,
   Alert,
   ActivityIndicator,
   SafeAreaView,
@@ -16,23 +15,15 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
+import UserService, { User, UserFilters } from '../services/UserService';
+import FilterChips, { FilterOption } from '../components/FilterChips';
 
 type ProfileStackParamList = {
   ProfileMain: undefined;
   UserManagement: undefined;
 };
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: 'user' | 'admin' | 'moderator';
-  status: 'active' | 'suspended' | 'banned';
-  joinDate: string;
-  lastActivity: string;
-  productsCount: number;
-  rating: number;
-}
+
 
 const UserManagementScreen = () => {
   const navigation = useNavigation<StackNavigationProp<ProfileStackParamList>>();
@@ -40,7 +31,6 @@ const UserManagementScreen = () => {
   
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'suspended' | 'banned'>('all');
   const [filterRole, setFilterRole] = useState<'all' | 'user' | 'admin' | 'moderator'>('all');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -48,90 +38,36 @@ const UserManagementScreen = () => {
 
   useEffect(() => {
     loadUsers();
-  }, []);
+  }, [filterStatus, filterRole]);
 
   const loadUsers = async () => {
     setLoading(true);
     try {
-      // Mock data - à remplacer par un vrai appel API
-      const mockUsers: User[] = [
-        {
-          id: '1',
-          name: 'Marie Dupont',
-          email: 'marie.dupont@email.com',
-          role: 'user',
-          status: 'active',
-          joinDate: '2024-01-15',
-          lastActivity: '2024-12-20',
-          productsCount: 12,
-          rating: 4.8
-        },
-        {
-          id: '2',
-          name: 'Jean Martin',
-          email: 'jean.martin@email.com',
-          role: 'user',
-          status: 'suspended',
-          joinDate: '2023-11-20',
-          lastActivity: '2024-12-18',
-          productsCount: 5,
-          rating: 3.2
-        },
-        {
-          id: '3',
-          name: 'Sophie Bernard',
-          email: 'sophie.bernard@email.com',
-          role: 'moderator',
-          status: 'active',
-          joinDate: '2023-08-10',
-          lastActivity: '2024-12-21',
-          productsCount: 0,
-          rating: 5.0
-        },
-        {
-          id: '4',
-          name: 'Pierre Dubois',
-          email: 'pierre.dubois@email.com',
-          role: 'user',
-          status: 'banned',
-          joinDate: '2024-03-05',
-          lastActivity: '2024-12-10',
-          productsCount: 8,
-          rating: 2.1
-        },
-        {
-          id: '5',
-          name: 'Admin Principal',
-          email: 'admin@souqly.com',
-          role: 'admin',
-          status: 'active',
-          joinDate: '2023-01-01',
-          lastActivity: '2024-12-21',
-          productsCount: 0,
-          rating: 5.0
-        }
-      ];
-      
-      setTimeout(() => {
-        setUsers(mockUsers);
-        setLoading(false);
-      }, 1000);
+      const filters: UserFilters = {
+        status: filterStatus !== 'all' ? filterStatus.toUpperCase() as any : undefined,
+        role: filterRole !== 'all' ? filterRole.toUpperCase() as any : undefined,
+        page: 0,
+        size: 50
+      };
+
+      const response = await UserService.getUsers(filters);
+      setUsers(response.content || []);
     } catch (error) {
+      console.error('Erreur lors du chargement des utilisateurs:', error);
       Alert.alert('Erreur', 'Impossible de charger les utilisateurs');
+    } finally {
       setLoading(false);
     }
   };
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
-    const matchesRole = filterRole === 'all' || user.role === filterRole;
+  const filteredUsers = (users || []).filter(user => {
+    const matchesStatus = filterStatus === 'all' || user.status === filterStatus.toUpperCase();
+    const matchesRole = filterRole === 'all' || user.role.toLowerCase() === filterRole;
     
-    return matchesSearch && matchesStatus && matchesRole;
+    return matchesStatus && matchesRole;
   });
 
-  const handleUserAction = (user: User, action: 'suspend' | 'ban' | 'activate' | 'promote' | 'demote') => {
+  const handleUserAction = async (user: User, action: 'suspend' | 'ban' | 'activate' | 'promote' | 'demote') => {
     const actionText = {
       suspend: 'suspendre',
       ban: 'bannir',
@@ -140,18 +76,25 @@ const UserManagementScreen = () => {
       demote: 'rétrograder'
     };
 
+    const fullName = `${user.firstName} ${user.lastName}`;
+
     Alert.alert(
       'Confirmation',
-      `Voulez-vous ${actionText[action]} l'utilisateur ${user.name} ?`,
+      `Voulez-vous ${actionText[action]} l'utilisateur ${fullName} ?`,
       [
         { text: 'Annuler', style: 'cancel' },
         {
           text: 'Confirmer',
           style: 'destructive',
-          onPress: () => {
-            // Ici on appellerait l'API pour effectuer l'action
-            Alert.alert('Succès', `Utilisateur ${actionText[action]} avec succès`);
-            loadUsers(); // Recharger les données
+          onPress: async () => {
+            try {
+              await UserService.performUserAction(user.id, { action });
+              Alert.alert('Succès', `Utilisateur ${actionText[action]} avec succès`);
+              loadUsers(); // Recharger les données
+            } catch (error) {
+              console.error('Erreur lors de l\'action sur l\'utilisateur:', error);
+              Alert.alert('Erreur', 'Une erreur est survenue lors de l\'action');
+            }
           }
         }
       ]
@@ -159,7 +102,7 @@ const UserManagementScreen = () => {
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case 'active': return '#4CAF50';
       case 'suspended': return '#FF9800';
       case 'banned': return '#F44336';
@@ -168,7 +111,7 @@ const UserManagementScreen = () => {
   };
 
   const getRoleColor = (role: string) => {
-    switch (role) {
+    switch (role.toLowerCase()) {
       case 'admin': return '#E91E63';
       case 'moderator': return '#9C27B0';
       case 'user': return '#2196F3';
@@ -186,7 +129,7 @@ const UserManagementScreen = () => {
     >
       <View style={styles.userHeader}>
         <View style={styles.userInfo}>
-          <Text style={[styles.userName, { color: colors.text }]}>{item.name}</Text>
+          <Text style={[styles.userName, { color: colors.text }]}>{`${item.firstName} ${item.lastName}`}</Text>
           <Text style={[styles.userEmail, { color: colors.textSecondary }]}>{item.email}</Text>
         </View>
         <View style={styles.userStats}>
@@ -203,7 +146,7 @@ const UserManagementScreen = () => {
         <View style={styles.detailItem}>
           <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
           <Text style={[styles.detailText, { color: colors.textSecondary }]}>
-            Inscrit le {new Date(item.joinDate).toLocaleDateString()}
+            Inscrit le {new Date(item.createdAt).toLocaleDateString()}
           </Text>
         </View>
         <View style={styles.detailItem}>
@@ -221,7 +164,7 @@ const UserManagementScreen = () => {
       </View>
       
       <View style={styles.userActions}>
-        {item.status === 'active' ? (
+        {item.status === 'ACTIVE' ? (
           <>
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: '#FF9800' }]}
@@ -268,55 +211,37 @@ const UserManagementScreen = () => {
       </View>
 
       <View style={styles.content}>
-        {/* Search and Filters */}
-        <View style={styles.searchContainer}>
-          <View style={[styles.searchInput, { backgroundColor: colors.card }]}>
-            <Ionicons name="search-outline" size={20} color={colors.textSecondary} />
-            <TextInput
-              style={[styles.searchTextInput, { color: colors.text }]}
-              placeholder="Rechercher un utilisateur..."
-              placeholderTextColor={colors.textSecondary}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-          </View>
-        </View>
 
-        {/* Filters */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersContainer}>
-          <TouchableOpacity
-            style={[styles.filterChip, filterStatus === 'all' && { backgroundColor: colors.primary }]}
-            onPress={() => setFilterStatus('all')}
-          >
-            <Text style={[styles.filterChipText, filterStatus === 'all' && { color: 'white' }]}>
-              Tous ({users.length})
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.filterChip, filterStatus === 'active' && { backgroundColor: colors.primary }]}
-            onPress={() => setFilterStatus('active')}
-          >
-            <Text style={[styles.filterChipText, filterStatus === 'active' && { color: 'white' }]}>
-              Actifs ({users.filter(u => u.status === 'active').length})
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.filterChip, filterStatus === 'suspended' && { backgroundColor: colors.primary }]}
-            onPress={() => setFilterStatus('suspended')}
-          >
-            <Text style={[styles.filterChipText, filterStatus === 'suspended' && { color: 'white' }]}>
-              Suspendus ({users.filter(u => u.status === 'suspended').length})
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.filterChip, filterStatus === 'banned' && { backgroundColor: colors.primary }]}
-            onPress={() => setFilterStatus('banned')}
-          >
-            <Text style={[styles.filterChipText, filterStatus === 'banned' && { color: 'white' }]}>
-              Bannis ({users.filter(u => u.status === 'banned').length})
-            </Text>
-          </TouchableOpacity>
-        </ScrollView>
+
+        {/* Status Filters */}
+        <View style={styles.filtersWrapper}>
+          <FilterChips
+            filters={[
+              { key: 'all', label: 'Tous', count: filteredUsers.length },
+              { key: 'active', label: 'Actifs', count: (users || []).filter(u => u.status === 'ACTIVE').length },
+              { key: 'suspended', label: 'Suspendus', count: (users || []).filter(u => u.status === 'SUSPENDED').length },
+              { key: 'banned', label: 'Bannis', count: (users || []).filter(u => u.status === 'BANNED').length },
+            ]}
+            selectedFilter={filterStatus}
+            onFilterSelect={(filterKey) => setFilterStatus(filterKey as any)}
+            title="Filtrer par statut"
+            showTitle={false}
+          />
+
+          {/* Role Filters */}
+          <FilterChips
+            filters={[
+              { key: 'all', label: 'Tous les rôles' },
+              { key: 'user', label: 'Utilisateurs', count: (users || []).filter(u => u.role === 'USER').length },
+              { key: 'admin', label: 'Admins', count: (users || []).filter(u => u.role === 'ADMIN').length },
+              { key: 'moderator', label: 'Modérateur', count: (users || []).filter(u => u.role === 'MODERATOR').length },
+            ]}
+            selectedFilter={filterRole}
+            onFilterSelect={(filterKey) => setFilterRole(filterKey as any)}
+            title="Filtrer par rôle"
+            showTitle={false}
+          />
+        </View>
 
         {/* Users List */}
         {loading ? (
@@ -330,7 +255,7 @@ const UserManagementScreen = () => {
           <FlatList
             data={filteredUsers}
             renderItem={renderUser}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => item.id.toString()}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContainer}
           />
@@ -361,8 +286,8 @@ const UserManagementScreen = () => {
                   <View style={styles.userDetailSection}>
                     <Text style={[styles.sectionTitle, { color: colors.text }]}>Informations</Text>
                     <View style={styles.detailRow}>
-                      <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Nom:</Text>
-                      <Text style={[styles.detailValue, { color: colors.text }]}>{selectedUser.name}</Text>
+                                          <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Nom:</Text>
+                    <Text style={[styles.detailValue, { color: colors.text }]}>{`${selectedUser.firstName} ${selectedUser.lastName}`}</Text>
                     </View>
                     <View style={styles.detailRow}>
                       <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Email:</Text>
@@ -395,15 +320,17 @@ const UserManagementScreen = () => {
                     <View style={styles.detailRow}>
                       <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Inscription:</Text>
                       <Text style={[styles.detailValue, { color: colors.text }]}>
-                        {new Date(selectedUser.joinDate).toLocaleDateString()}
+                        {new Date(selectedUser.createdAt).toLocaleDateString()}
                       </Text>
                     </View>
-                    <View style={styles.detailRow}>
-                      <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Dernière activité:</Text>
-                      <Text style={[styles.detailValue, { color: colors.text }]}>
-                        {new Date(selectedUser.lastActivity).toLocaleDateString()}
-                      </Text>
-                    </View>
+                    {selectedUser.lastLoginAt && (
+                      <View style={styles.detailRow}>
+                        <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Dernière connexion:</Text>
+                        <Text style={[styles.detailValue, { color: colors.text }]}>
+                          {new Date(selectedUser.lastLoginAt).toLocaleDateString()}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 </ScrollView>
               </>
@@ -424,14 +351,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 50,
+    paddingTop: 10,
     paddingBottom: 10,
     backgroundColor: 'transparent',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
   },
   backButton: {
     padding: 8,
@@ -447,38 +369,12 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 100,
+    paddingHorizontal: 0,
   },
-  searchContainer: {
-    marginBottom: 16,
+  filtersWrapper: {
+    marginBottom: 4,
   },
-  searchInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  searchTextInput: {
-    flex: 1,
-    marginLeft: 8,
-    fontSize: 16,
-  },
-  filtersContainer: {
-    marginBottom: 16,
-  },
-  filterChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginRight: 8,
-    backgroundColor: '#f0f0f0',
-  },
-  filterChipText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
+
   listContainer: {
     paddingBottom: 20,
   },

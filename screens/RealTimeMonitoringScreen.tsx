@@ -294,7 +294,7 @@ const RealTimeMonitoringScreen = () => {
                   ]} />
                 </View>
                 
-                <View style={styles.metricValue}>
+                <View style={styles.metricValueContainer}>
                   <Text style={[styles.valueText, { color: colors.text }]}>
                     {metric.value.toFixed(1)}
                   </Text>
@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 40,
+    paddingTop: 10,
     paddingBottom: 16,
     backgroundColor: 'transparent', // Ensure it's transparent to allow SafeAreaView to handle background
   },
@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
   },
-  metricValue: {
+  metricValueContainer: {
     flexDirection: 'row',
     alignItems: 'baseline',
   },

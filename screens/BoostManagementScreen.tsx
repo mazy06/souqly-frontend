@@ -242,7 +242,7 @@ const BoostManagementScreen = () => {
             Filtres
           </Text>
           
-          <View style={styles.filterButtons}>
+          <View style={[styles.filterButtons, { backgroundColor: colors.card }]}>
             <TouchableOpacity
               style={[
                 styles.filterButton,
@@ -412,9 +412,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 40,
+    paddingTop: 10,
     paddingBottom: 16,
-    backgroundColor: '#F2F2F7', // Default light background
   },
   backButton: {
     padding: 8,
@@ -430,7 +429,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F2F2F7', // Default light background
   },
   loadingText: {
     fontSize: 18,
@@ -475,7 +473,6 @@ const styles = StyleSheet.create({
   filterButtons: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    backgroundColor: '#F2F2F7', // Default light background
     borderRadius: 12,
     padding: 5,
   },

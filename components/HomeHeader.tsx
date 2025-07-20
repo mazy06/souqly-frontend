@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import SearchBar from './SearchBar';
-import FilterChips from './FilterChips';
+import SearchFilterChips from './SearchFilterChips';
 
 interface HomeHeaderProps {
   search: string;
@@ -31,7 +31,7 @@ export default function HomeHeader({
         onPressCamera={onCameraPress}
         onSubmit={onSearchSubmit}
       />
-      <FilterChips selected={selectedFilter} onSelect={onFilterSelect} />
+      <SearchFilterChips selected={selectedFilter} onSelect={onFilterSelect} />
     </View>
   );
 }

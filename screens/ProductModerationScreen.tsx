@@ -5,7 +5,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  TextInput,
   Alert,
   ActivityIndicator,
   SafeAreaView,
@@ -20,6 +19,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import ReportService, { Report } from '../services/ReportService';
 import ProductService from '../services/ProductService';
 import { CommonActions } from '@react-navigation/native';
+import FilterChips, { FilterOption } from '../components/FilterChips';
 
 type ProfileStackParamList = {
   ProfileMain: undefined;
@@ -57,7 +57,6 @@ const ProductModerationScreen = () => {
   
   const [products, setProducts] = useState<ProductWithReports[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'flagged'>('all');
   const [rejectionReason, setRejectionReason] = useState('');
 
@@ -212,12 +211,9 @@ const ProductModerationScreen = () => {
   };
 
   const filteredProducts = products.filter(product => {
-    const matchesSearch = product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         product.seller.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = filterStatus === 'all' || product.status === filterStatus;
     
-    return matchesSearch && matchesStatus;
+    return matchesStatus;
   });
 
   const handleProductAction = async (product: ProductWithReports, action: 'approve' | 'reject' | 'flag') => {
@@ -430,103 +426,22 @@ const ProductModerationScreen = () => {
       </View>
 
       <View style={styles.content}>
-        {/* Search and Filters */}
-        <View style={styles.searchContainer}>
-          <View style={[styles.searchInput, { backgroundColor: colors.card }]}>
-            <Ionicons name="search-outline" size={20} color={colors.textSecondary} />
-            <TextInput
-              style={[styles.searchTextInput, { color: colors.text }]}
-              placeholder="Rechercher un produit..."
-              placeholderTextColor={colors.textSecondary}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-          </View>
-        </View>
+
 
         {/* Filters */}
-        <View style={styles.filtersContainer}>
-          <Text style={[styles.filtersTitle, { color: colors.text }]}>
-            Filtrer par statut
-          </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersScrollView}>
-            <TouchableOpacity
-              style={[
-                styles.filterChip, 
-                { backgroundColor: filterStatus === 'all' ? colors.primary : colors.card },
-                { borderColor: filterStatus === 'all' ? colors.primary : colors.border }
-              ]}
-              onPress={() => setFilterStatus('all')}
-            >
-              <Text style={[
-                styles.filterChipText, 
-                { color: filterStatus === 'all' ? 'white' : colors.text }
-              ]}>
-                Tous ({products.length})
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.filterChip, 
-                { backgroundColor: filterStatus === 'pending' ? colors.primary : colors.card },
-                { borderColor: filterStatus === 'pending' ? colors.primary : colors.border }
-              ]}
-              onPress={() => setFilterStatus('pending')}
-            >
-              <Text style={[
-                styles.filterChipText, 
-                { color: filterStatus === 'pending' ? 'white' : colors.text }
-              ]}>
-                En attente ({products.filter(p => p.status === 'pending').length})
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.filterChip, 
-                { backgroundColor: filterStatus === 'flagged' ? colors.primary : colors.card },
-                { borderColor: filterStatus === 'flagged' ? colors.primary : colors.border }
-              ]}
-              onPress={() => setFilterStatus('flagged')}
-            >
-              <Text style={[
-                styles.filterChipText, 
-                { color: filterStatus === 'flagged' ? 'white' : colors.text }
-              ]}>
-                Signalés ({products.filter(p => p.status === 'flagged').length})
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.filterChip, 
-                { backgroundColor: filterStatus === 'approved' ? colors.primary : colors.card },
-                { borderColor: filterStatus === 'approved' ? colors.primary : colors.border }
-              ]}
-              onPress={() => setFilterStatus('approved')}
-            >
-              <Text style={[
-                styles.filterChipText, 
-                { color: filterStatus === 'approved' ? 'white' : colors.text }
-              ]}>
-                Approuvés ({products.filter(p => p.status === 'approved').length})
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.filterChip, 
-                { backgroundColor: filterStatus === 'rejected' ? colors.primary : colors.card },
-                { borderColor: filterStatus === 'rejected' ? colors.primary : colors.border }
-              ]}
-              onPress={() => setFilterStatus('rejected')}
-            >
-              <Text style={[
-                styles.filterChipText, 
-                { color: filterStatus === 'rejected' ? 'white' : colors.text }
-              ]}>
-                Rejetés ({products.filter(p => p.status === 'rejected').length})
-              </Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
+        <FilterChips
+          filters={[
+            { key: 'all', label: 'Tous', count: products.length },
+            { key: 'pending', label: 'En attente', count: products.filter(p => p.status === 'pending').length },
+            { key: 'flagged', label: 'Signalés', count: products.filter(p => p.status === 'flagged').length },
+            { key: 'approved', label: 'Approuvés', count: products.filter(p => p.status === 'approved').length },
+            { key: 'rejected', label: 'Rejetés', count: products.filter(p => p.status === 'rejected').length },
+          ]}
+          selectedFilter={filterStatus}
+          onFilterSelect={(filterKey) => setFilterStatus(filterKey as any)}
+          title="Filtrer par statut"
+          showTitle={false}
+        />
 
         {/* Products List */}
         {loading ? (
@@ -559,14 +474,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 50,
+    paddingTop: 10,
     paddingBottom: 10,
     backgroundColor: 'transparent',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
   },
   backButton: {
     padding: 8,
@@ -582,23 +492,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 100,
-  },
-  searchContainer: {
-    marginBottom: 16,
-  },
-  searchInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  searchTextInput: {
-    flex: 1,
-    marginLeft: 8,
-    fontSize: 16,
+    paddingHorizontal: 0,
   },
   filtersContainer: {
     marginBottom: 16,
