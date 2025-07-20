@@ -39,6 +39,9 @@ import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import * as Localization from 'expo-localization';
 import * as Notifications from 'expo-notifications';
+import DynamicForm from '../components/DynamicForm';
+import DynamicFormService from '../services/DynamicFormService';
+import { DynamicForm as DynamicFormType, FormField } from '../types/dynamicForms';
 countries.registerLocale(require('i18n-iso-countries/langs/fr.json'));
 const cities: { name: string; country: string }[] = citiesRaw as any;
 
@@ -290,6 +293,11 @@ export default function SellScreen() {
   const [defaultCountry, setDefaultCountry] = useState<string>('');
   const [paymentCompleted, setPaymentCompleted] = useState(false);
   const screenWidth = Dimensions.get('window').width;
+  
+  // États pour le formulaire dynamique
+  const [dynamicForm, setDynamicForm] = useState<DynamicFormType | null>(null);
+  const [dynamicFormValues, setDynamicFormValues] = useState<Record<string, any>>({});
+  const [dynamicFormLoading, setDynamicFormLoading] = useState(false);
 
   // Charger les catégories et initialiser les notifications au montage
   useEffect(() => {
@@ -324,6 +332,31 @@ export default function SellScreen() {
     
     initializeScreen();
   }, []);
+
+  // Charger le formulaire dynamique quand la catégorie change
+  useEffect(() => {
+    const loadDynamicForm = async () => {
+      if (formData.category) {
+        setDynamicFormLoading(true);
+        try {
+          const categoryId = parseInt(formData.category);
+          const form = await DynamicFormService.getFormByCategory(categoryId);
+          setDynamicForm(form);
+          setDynamicFormValues({});
+        } catch (error) {
+          console.error('Erreur lors du chargement du formulaire dynamique:', error);
+          setDynamicForm(null);
+        } finally {
+          setDynamicFormLoading(false);
+        }
+      } else {
+        setDynamicForm(null);
+        setDynamicFormValues({});
+      }
+    };
+
+    loadDynamicForm();
+  }, [formData.category]);
 
   // Détecter quand on revient du paiement
   useEffect(() => {
@@ -472,6 +505,8 @@ export default function SellScreen() {
         handoverAddress: formData.handoverAddress,
         packageFormat: formData.packageFormat,
         packageWeight: formData.packageWeight,
+        // Ajouter les données du formulaire dynamique
+        dynamicFormValues: Object.keys(dynamicFormValues).length > 0 ? dynamicFormValues : undefined,
       };
       
       const result = await ProductService.createProduct(productData);
@@ -542,6 +577,10 @@ export default function SellScreen() {
       setDefaultCountry('');
       setDefaultRegion(null);
       setCurrentStep(SellStep.ESSENTIALS);
+      
+      // Réinitialiser le formulaire dynamique
+      setDynamicForm(null);
+      setDynamicFormValues({});
 
       // Masquer le message après 3 secondes
       setTimeout(() => {
@@ -559,6 +598,10 @@ export default function SellScreen() {
     if (errorMessage) {
       setErrorMessage('');
     }
+  };
+
+  const updateDynamicFormData = (fieldKey: string, value: any) => {
+    setDynamicFormValues(prev => ({ ...prev, [fieldKey]: value }));
   };
 
   const handleExtraPhotosPurchase = (quantity: number, price: number) => {
@@ -719,6 +762,29 @@ export default function SellScreen() {
               onSelect={(value: string) => updateFormData('condition', value)}
               placeholder="Sélectionner un état"
             />
+
+            {/* Formulaire dynamique */}
+            {dynamicFormLoading ? (
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: colors.text }]}>Chargement du formulaire...</Text>
+                <View style={[styles.textInput, { backgroundColor: '#f5f5f5', justifyContent: 'center', alignItems: 'center', padding: 20 }]}>
+                  <Text style={{ color: colors.tabIconDefault }}>Chargement des champs personnalisés...</Text>
+                </View>
+              </View>
+            ) : dynamicForm ? (
+              <View style={styles.inputGroup}>
+                <Text style={[styles.inputLabel, { color: colors.text }]}>
+                  Informations supplémentaires pour {dynamicForm.name}
+                </Text>
+                <DynamicForm
+                  categoryId={parseInt(formData.category)}
+                  initialValues={dynamicFormValues}
+                  onFormSubmit={(values) => {
+                    setDynamicFormValues(values);
+                  }}
+                />
+              </View>
+            ) : null}
           </>
         );
 
@@ -1711,9 +1777,17 @@ export default function SellScreen() {
             <Text style={[styles.headerTitle, { color: colors.text }]}>
               {stepConfigs[currentStep].title}
             </Text>
-            <TouchableOpacity onPress={resetForm} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color={colors.text} />
-            </TouchableOpacity>
+            <View style={styles.headerButtons}>
+              <TouchableOpacity 
+                onPress={() => navigation.navigate('DynamicFormTest' as never)} 
+                style={styles.testButton}
+              >
+                <Ionicons name="flask" size={20} color={colors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={resetForm} style={styles.closeButton}>
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
           </View>
           
           {/* Barre de progression */}
@@ -2781,9 +2855,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
   },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   testButton: {
-    margin: 16,
-    padding: 12,
+    marginRight: 8,
+    padding: 8,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',

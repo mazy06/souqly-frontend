@@ -38,6 +38,8 @@ import TransferSelectionScreen from '../screens/TransferSelectionScreen';
 import TransferAmountScreen from '../screens/TransferAmountScreen';
 import TransferConfirmationScreen from '../screens/TransferConfirmationScreen';
 import TransferSuccessScreen from '../screens/TransferSuccessScreen';
+import DynamicFormsManagementScreen from '../screens/DynamicFormsManagementScreen';
+import DynamicFormFieldsScreen from '../screens/DynamicFormFieldsScreen';
 import { ProfileStackParamList } from '../types/navigation';
 
 const Stack = createStackNavigator();
@@ -91,6 +93,8 @@ export default function ProfileStack() {
       <Stack.Screen name="TransferAmount" component={TransferAmountScreen} />
       <Stack.Screen name="TransferConfirmation" component={TransferConfirmationScreen} />
       <Stack.Screen name="TransferSuccess" component={TransferSuccessScreen} />
+      <Stack.Screen name="DynamicFormsManagement" component={DynamicFormsManagementScreen} />
+      <Stack.Screen name="DynamicFormFields" component={DynamicFormFieldsScreen} />
     </Stack.Navigator>
   );
 } 

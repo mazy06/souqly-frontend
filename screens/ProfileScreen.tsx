@@ -37,6 +37,7 @@ export type ProfileStackParamList = {
   SubscriptionManagement: undefined;
   MarketingPromotions: undefined;
   SEOOptimization: undefined;
+  DynamicFormsManagement: undefined;
   MyProducts: undefined;
   MyProductDetail: { productId: string };
   EditProduct: { productId: string };
@@ -618,6 +619,20 @@ export default function ProfileScreen() {
                 <Ionicons name="list-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
                 <Text style={[styles.announcementsTitle, { color: colors.text }]}>
                   Gestion des catégories
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.announcementsSection}>
+              <TouchableOpacity
+                style={styles.announcementsCard}
+                onPress={() => navigation.navigate('DynamicFormsManagement')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="document-text-outline" size={24} color={colors.primary} style={styles.announcementsIcon} />
+                <Text style={[styles.announcementsTitle, { color: colors.text }]}>
+                  Formulaires dynamiques
                 </Text>
                 <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
               </TouchableOpacity>
