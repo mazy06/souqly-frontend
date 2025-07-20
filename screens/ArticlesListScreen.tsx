@@ -40,6 +40,12 @@ export default function ArticlesListScreen() {
   const { logout, isGuest, isAuthenticated } = useAuth();
   const { colors } = useTheme();
   const { isFavorite, toggleFavorite, refreshFavorites } = useFavorites();
+  
+  // Récupérer les paramètres de route
+  const routeParams = route.params as { category?: string; categoryName?: string } | undefined;
+  const selectedCategory = routeParams?.category;
+  const categoryName = routeParams?.categoryName;
+  
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +72,16 @@ export default function ArticlesListScreen() {
         pageSize: 10
       });
 
-      const newProducts = response.content || [];
+      let newProducts = response.content || [];
+      
+      // Filtrer par catégorie si une catégorie est sélectionnée
+      if (selectedCategory) {
+        newProducts = newProducts.filter(product => 
+          product.category?.categoryKey?.toLowerCase() === selectedCategory.toLowerCase() ||
+          product.category?.label?.toLowerCase() === selectedCategory.toLowerCase()
+        );
+      }
+      
       // Charger les URLs des images pour les nouveaux produits
       const urls: {[key: number]: string} = {};
       for (const product of newProducts) {
@@ -447,7 +462,7 @@ export default function ArticlesListScreen() {
               </TouchableOpacity>
               
               <Text style={[styles.headerTitle, { color: colors.text }]}>
-                Tous les articles
+                {categoryName || 'Tous les articles'}
               </Text>
               
               <TouchableOpacity 

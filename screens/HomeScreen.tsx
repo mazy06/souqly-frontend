@@ -25,7 +25,7 @@ import * as ImagePicker from 'expo-image-picker';
 export type HomeStackParamList = {
   HomeMain: undefined;
   ProductDetail: { productId: string };
-  ArticlesList: undefined;
+  ArticlesList: { category?: string; categoryName?: string };
   SearchResults: { query: string; category?: string };
   Category: { categoryKey: string; categoryLabel: string };
   CategoriesGrid: undefined;
@@ -353,8 +353,8 @@ export default function HomeScreen() {
           trackingService.trackSearch(search.trim(), parseInt(user.id));
         }
         
-        // Navigation vers l'écran de recherche avec le terme
-        navigation.navigate('SearchResults', { query: search.trim() });
+        // Navigation vers ArticlesList avec le même affichage
+        navigation.navigate('ArticlesList', {});
       } catch (error) {
         console.error('Erreur recherche:', error);
         Alert.alert('Erreur', 'Impossible de lancer la recherche pour le moment');
@@ -408,19 +408,19 @@ export default function HomeScreen() {
 
   const handleViewAllRecent = () => {
     // Navigation vers l'écran de tous les articles
-    navigation.navigate('ArticlesList');
+    navigation.navigate('ArticlesList', {});
   };
 
   const handleViewAllCategory = (category: string) => {
     // Navigation vers l'écran de tous les articles
-    navigation.navigate('ArticlesList');
+    navigation.navigate('ArticlesList', {});
   };
 
   const handleCategoryPress = (category: Category) => {
-    // Navigation vers l'écran de recherche avec la catégorie pré-sélectionnée
-    navigation.navigate('SearchResults', { 
-      query: '', 
-      category: category.key 
+    // Navigation vers ArticlesList avec filtrage par catégorie
+    navigation.navigate('ArticlesList', { 
+      category: category.key,
+      categoryName: category.label 
     });
   };
 
@@ -487,7 +487,7 @@ export default function HomeScreen() {
         <PromotionalBanner
           title="Découvrez nos nouveautés"
           subtitle="Les meilleures offres vous attendent"
-          onPress={() => navigation.navigate('ArticlesList')}
+          onPress={() => navigation.navigate('ArticlesList', {})}
         />
 
         {/* Section Catégories */}
@@ -509,7 +509,7 @@ export default function HomeScreen() {
             showBoostedBadge={true}
             onProductPress={handleProductPress}
             onFavoritePress={handleFavoritePress}
-            onViewAllPress={() => navigation.navigate('ArticlesList')}
+            onViewAllPress={() => navigation.navigate('ArticlesList', {})}
           />
         )}
 
@@ -535,7 +535,7 @@ export default function HomeScreen() {
             products={recentProducts}
             onProductPress={handleProductPress}
             onFavoritePress={handleFavoritePress}
-            onViewAllPress={() => navigation.navigate('ArticlesList')}
+            onViewAllPress={() => navigation.navigate('ArticlesList', {})}
             imageUrls={imageUrls}
             favoriteCounts={favoriteCounts}
             isFavorite={isFavorite}

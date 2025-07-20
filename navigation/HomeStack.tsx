@@ -15,6 +15,8 @@ import CategoryScreen from '../screens/CategoryScreen';
 import CategoriesGridScreen from '../screens/CategoriesGridScreen';
 import FiltersScreen from '../screens/FiltersScreen';
 import ReportProductScreen from '../screens/ReportProductScreen';
+import HelpScreen from '../screens/HelpScreen';
+import TermsScreen from '../screens/TermsScreen';
 
 const Stack = createStackNavigator();
 
@@ -43,6 +45,8 @@ export default function HomeStack() {
       <Stack.Screen name="Review" component={ReviewScreen} />
       <Stack.Screen name="AuthLanding" component={AuthLandingScreen} />
       <Stack.Screen name="ReportProduct" component={ReportProductScreen} />
+      <Stack.Screen name="HelpScreen" component={HelpScreen} />
+      <Stack.Screen name="TermsScreen" component={TermsScreen} />
     </Stack.Navigator>
   );
 } 

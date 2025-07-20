@@ -258,11 +258,11 @@ export default function ProductDetailScreen() {
   };
 
   const handleHelpPress = () => {
-    Alert.alert('Aide', 'Centre d\'aide à implémenter');
+    navigation.navigate('HelpScreen');
   };
 
   const handleTermsPress = () => {
-    // Navigation vers les conditions d'utilisation
+    navigation.navigate('TermsScreen');
   };
 
   const handleOfferPress = () => {
