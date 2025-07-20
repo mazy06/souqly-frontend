@@ -13,6 +13,7 @@ import { useFavorites } from '../hooks/useFavorites';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getImageUrl } from '../constants/Config';
 import SearchHeader from '../components/SearchHeader';
+import { getProductPlaceholder } from '../utils/imageUtils';
 
 // Types pour la navigation
 export type SearchArticlesListStackParamList = {
@@ -163,7 +164,7 @@ export default function SearchArticlesListScreen() {
       condition={item.condition}
       price={item.price.toString()}
       priceWithFees={item.priceWithFees?.toString()}
-      image={imageUrls[item.id] || (item.images && item.images.length > 0 ? getImageUrl(item.images[0].id) : 'https://via.placeholder.com/120')}
+      image={imageUrls[item.id] || (item.images && item.images.length > 0 ? getImageUrl(item.images[0].id) : getProductPlaceholder())}
       likes={favoriteCounts[item.id] || 0}
       isFavorite={isFavorite(item.id)}
       onPress={() => handleProductPress(item.id)}

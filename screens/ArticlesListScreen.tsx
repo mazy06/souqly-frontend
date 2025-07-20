@@ -17,6 +17,7 @@ import SearchBar from '../components/SearchBar';
 import FilterChips from '../components/FilterChips';
 import { Ionicons } from '@expo/vector-icons';
 import AdaptiveImage from '../components/AdaptiveImage';
+import { getProductPlaceholder } from '../utils/imageUtils';
 
 // Types pour la navigation
 export type ArticlesListStackParamList = {
@@ -295,7 +296,7 @@ export default function ArticlesListScreen() {
       >
         <View style={styles.pinterestImageContainer}>
           <AdaptiveImage
-            source={{ uri: imageUrls[item.id] || (item.images && item.images.length > 0 ? getImageUrl(item.images[0].id) : 'https://via.placeholder.com/120') }}
+            source={{ uri: imageUrls[item.id] || (item.images && item.images.length > 0 ? getImageUrl(item.images[0].id) : getProductPlaceholder()) }}
             style={styles.pinterestImage}
           />
           <TouchableOpacity 
@@ -337,7 +338,7 @@ export default function ArticlesListScreen() {
       >
         <View style={styles.ecommerceImageContainer}>
           <AdaptiveImage
-            source={{ uri: imageUrls[item.id] || (item.images && item.images.length > 0 ? getImageUrl(item.images[0].id) : 'https://via.placeholder.com/120') }}
+            source={{ uri: imageUrls[item.id] || (item.images && item.images.length > 0 ? getImageUrl(item.images[0].id) : getProductPlaceholder()) }}
             style={styles.ecommerceImage}
           />
           <TouchableOpacity 

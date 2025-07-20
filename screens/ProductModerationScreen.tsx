@@ -20,6 +20,7 @@ import ReportService, { Report } from '../services/ReportService';
 import ProductService from '../services/ProductService';
 import { CommonActions } from '@react-navigation/native';
 import FilterChips, { FilterOption } from '../components/FilterChips';
+import { getProductPlaceholder } from '../utils/imageUtils';
 
 type ProfileStackParamList = {
   ProfileMain: undefined;
@@ -167,7 +168,7 @@ const ProductModerationScreen = () => {
             },
             status: 'pending',
             category: 'Électronique',
-            images: ['https://via.placeholder.com/150'],
+            images: [getProductPlaceholder()],
             createdAt: '2024-12-20',
             reportCount: 0,
             reportReasons: [],
@@ -186,7 +187,7 @@ const ProductModerationScreen = () => {
             },
             status: 'flagged',
             category: 'Chaussures',
-            images: ['https://via.placeholder.com/150'],
+            images: [getProductPlaceholder()],
             createdAt: '2024-12-19',
             reportCount: 3,
             reportReasons: ['Prix suspect', 'Description trompeuse'],

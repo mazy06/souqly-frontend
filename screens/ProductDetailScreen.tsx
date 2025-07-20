@@ -23,6 +23,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import ApiService from '../services/ApiService';
 import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getProductPlaceholder } from '../utils/imageUtils';
 
 type ProductDetailRouteProp = RouteProp<{ ProductDetail: { productId: string } }, 'ProductDetail'>;
 
@@ -485,7 +486,7 @@ export default function ProductDetailScreen() {
               price: product.price,
               imageUrl: product.images && product.images.length > 0 
                 ? ProductService.getImageUrl(product.images[0].id)
-                : 'https://via.placeholder.com/120',
+                : getProductPlaceholder(),
               isFavorite: false, // Par défaut, on ne peut pas savoir si c'est un favori sans être connecté
             }))}
             onProductPress={handleProductPress}

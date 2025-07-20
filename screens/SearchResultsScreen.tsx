@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { useFavorites } from '../hooks/useFavorites';
+import { getProductPlaceholder } from '../utils/imageUtils';
 import ProductService, { Product } from '../services/ProductService';
 import ProductCard from '../components/ProductCard';
 import SearchBar from '../components/SearchBar';
@@ -157,7 +158,7 @@ export default function SearchResultsScreen() {
       condition={item.condition}
       price={item.price.toString()}
       priceWithFees={item.priceWithFees?.toString()}
-      image={imageUrls[item.id] || 'https://via.placeholder.com/120'}
+      image={imageUrls[item.id] || getProductPlaceholder()}
       likes={item.favoriteCount}
       isFavorite={isFavorite(item.id)}
       onPress={() => handleProductPress(item.id)}

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { Product } from '../services/ProductService';
+import { getProductPlaceholder } from '../utils/imageUtils';
 
 interface ConversationProductCardProps {
   product: Product;
@@ -26,7 +27,7 @@ const ConversationProductCard: React.FC<ConversationProductCardProps> = ({
       // Utiliser l'URL de l'image depuis le service
       return `http://192.168.1.153:8080/api/products/image/${product.images[0].id}`;
     }
-    return 'https://via.placeholder.com/120';
+    return getProductPlaceholder();
   };
 
   return (

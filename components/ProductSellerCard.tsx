@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import SellerReviews from './SellerReviews';
-import ReviewService, { Review, SellerRating } from '../services/ReviewService';
+import ReviewService from '../services/ReviewService';
 
 interface Seller {
   id: number;
@@ -16,6 +16,18 @@ interface Seller {
   isFollowing?: boolean;
   isVerified: boolean;
   responseTime: string;
+}
+
+interface SellerRating {
+  averageRating: number;
+  totalReviews: number;
+  recentReviews: Array<{
+    id: number;
+    rating: number;
+    comment: string;
+    buyerName: string;
+    createdAt: string;
+  }>;
 }
 
 interface ProductSellerCardProps {
@@ -110,7 +122,7 @@ export default function ProductSellerCard({ seller, onFollow, onPress }: Product
       {showReviews && (
         <View style={{ marginTop: 12 }}>
           {/* SUPPRIME le header nom/étoile/note ici */}
-          {paginatedReviews.map(item => (
+          {paginatedReviews.map((item: any) => (
             <View key={item.id} style={{ backgroundColor: '#f8f9fa', borderRadius: 8, padding: 10, marginBottom: 8 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                 {renderStars(item.rating)}

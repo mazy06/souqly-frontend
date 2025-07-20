@@ -12,6 +12,7 @@ import GuestMessage from '../components/GuestMessage';
 import SectionHeader from '../components/SectionHeader';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import SearchHeader from '../components/SearchHeader';
+import { getProductPlaceholder } from '../utils/imageUtils';
 
 
 // Types pour la navigation
@@ -106,7 +107,7 @@ export default function FavoritesScreen() {
       condition={item.condition}
       price={item.price.toString()}
       priceWithFees={item.priceWithFees?.toString()}
-      image={imageUrls[item.id] || 'https://via.placeholder.com/120'}
+      image={imageUrls[item.id] || getProductPlaceholder()}
       onPress={() => handleProductPress(item.id)}
       likes={item.favoriteCount}
       isFavorite={true}
